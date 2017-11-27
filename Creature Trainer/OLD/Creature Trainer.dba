@@ -1,0 +1,1969 @@
+Rem Project: Creature Trainer
+Rem Created: Monday, October 16, 2017
+
+Rem ***** Main Source File *****
+Rem Project: Test sight
+Rem Created: Thursday, October 05, 2017
+Rem *****Creature Line of Sight Demo****
+//SYNC ON//SYNC RATE 60
+#constant finder = 20000
+#constant maturity = 500
+#constant true = 1
+#constant false = 0
+#constant Learning_constant = 2000
+#CONSTANT cplayer = 2000 
+#CONSTANT csight =10000
+#CONSTANT eyeoffset = 2000
+#CONSTANT cfood = 2
+#CONSTANT cmate = 1
+#CONSTANT cenemy = 3
+#CONSTANT cwall = 4
+#constant max_trees = 100
+#constant tree_offset = 5000
+#constant wall_offset = 6000
+#Constant world_size = 1000
+#constant Max_age = 1
+
+type vector
+ 	x as float
+ 	y as float
+ 	z as float
+endtype
+  
+type output 
+   direction as float
+   turn as float
+endtype
+            
+type inputs
+     food as float
+     mate as float
+     enemy as float
+     wall as float
+     nothing as float
+      
+     h1 as float
+     h2 as float
+     h3 as float
+     h4 as float
+     h5 as float
+endtype
+ 
+type HIDDEN 
+     h1 as float
+     h2 as float
+     h3 as float
+     h4 as float
+     h5 as float
+endtype
+ 
+
+type brain
+ 	value as float
+ 	w1 as float 
+ 	w2 as float
+ 	w3 as float
+ 	w4 as float
+ 	w5 as float
+endtype
+
+type input_type
+ 	val1 as brain //
+ 	val2 as brain
+ 	val3 as brain // ENEMY
+ 	val4 as brain
+ 	val5 as brain
+ 	val6 as brain
+ 	val7 as brain
+ 	val8 as brain
+ 	val9 as brain
+endtype
+ 
+type creature
+ 	sex as integer
+ 	position as vector
+ 	kingdom as integer
+ 	Neuron as input_type
+ 	speed as float
+ 	age as integer
+ 	fitness as integer
+ 	distance_moved as integer
+ 	COLOR as integer
+ 	health as integer
+ 	fov as float
+ 	sight_dist as float
+ 	turn_speed as float
+ 	size as float
+ 	Jump as float
+ 	jump_flag as integer
+endtype
+
+global avgval11 as float
+global avgval12 as float
+global avgval13 as float
+global avgval14 as float
+global avgval15 as float
+
+global avgval21 as float
+global avgval22 as float
+global avgval23 as float
+global avgval24 as float
+global avgval25 as float
+
+global avgval31 as float
+global avgval32 as float
+global avgval33 as float
+global avgval34 as float
+global avgval35 as float
+
+global avgval41 as float
+global avgval42 as float
+global avgval43 as float
+global avgval44 as float
+global avgval45 as float
+
+global avgval51 as float
+global avgval52 as float
+global avgval53 as float
+global avgval54 as float
+global avgval55 as float
+
+global Majority_sex = 1
+
+global i_num = 5
+global h_num = 5
+global o_num = 2
+
+global nur as input_type
+
+global longest_lived
+global highest_speed
+global highest_health
+global max_health = 1000
+global Max_creatures = 200
+global inputs as input_type
+Global last_select 
+Global POPULATION as integer
+Global Tree_population
+global mousex#
+Global mousey#
+
+Global AVGSPEED  
+Global AVGHEALTH  
+Global AVGAGE  
+Global AVGFOV  
+Global AVGSIGHT  
+Global AVGTURN  
+Global AVGsize 
+GLOBAL SYNC_RATE = 30
+
+
+
+
+
+dim past_creatures1(300) as integer	
+dim past_creatures2(300) as integer	
+dim past_creatures3(300) as integer	
+dim past_creatures4(300) as integer	
+dim past_creatures5(300) as integer	
+dim past_creatures6(300) as integer	
+
+dim creatures(5) as creature
+dim memory(300,50) as integer
+
+
+
+
+
+
+SET TEXT FONT "verdana"
+SET TEXT SIZE 12
+
+Input "Input number of creatures to spawn then press ENTER:",Max_creatures
+wait 300
+
+
+
+randomize (rnd(1000000))
+
+//=========================================================================================================================
+//            Starting to Main Game loop, After creature is trained Main loop moves to the MOVE_CREATURE function          
+//=========================================================================================================================
+while keystate(1) = false
+Print "Helpful Hint, Nature likes Randomness"
+print "Training Tends to lead to Higher rates of Cultures dying off"
+Print "I Never see Randomized Die off unless Creature count is below 50"
+print ""
+print ""
+Print "Press R for randomized Creatures"
+print "Press E for Creatures all at 20%"
+print "Press T to Train Creatures with User controls"
+print ""
+Print "<Run Mode Keys>"
+Print "<+/-> Controls Frame Per Speed"
+Print "Press M to Mutate the Selected Creature"
+Print "Press P to Pause"
+print "Press C to clear the creature data from the screen"
+print "Arrow keys control position of the Camera"
+print "Use the mouse to adjust the Camera Pitch"
+print " "
+sync
+wait key
+      if keystate(28) = true 
+          wait 200
+          initialize()
+      	  init_creatures(3)
+      	  move_creatures()
+      endif
+      if keystate(19) = true
+          wait 200
+          initialize()
+      	  init_creatures(1)
+      	  move_creatures()
+      endif
+      if keystate(18) = true
+          wait 200
+          initialize()
+      	  init_creatures(2)
+      	  move_creatures()
+      endif
+      
+      if keystate(35) = true
+          wait 200
+          initialize()
+      	  init_creatures(4)
+      	  move_creatures()
+      endif
+      
+      if keystate(20) = true
+          wait 200
+          cls 
+          Print "You will soon see a Creature in front of you, control him using the arrow keys"
+          print ""
+          print "The white triangle is his line of sight and your reactions and controls when"
+          print "the items are in his view will determine ALL of the creatures behaviors."
+          print " "
+          print "When you are happy with your setting start the game by hitting ENTER"
+          print ""
+          print "Press Any Key to Continue..."
+          WAIT key
+          initialize()
+          Creature_trainer()
+      endif
+endwhile
+//============================================================================================================================================
+//            Initialization Functions                                                                          
+//============================================================================================================================================
+
+function INIT_creatures(style as integer)
+  
+backdrop off
+
+SET CURSOR 0,0
+
+	delete object 1:delete object 2:delete object 3:delete object 4:delete object 5
+	
+	set OBJECT collision off csight
+	HIDE OBJECT CSIGHT
+	
+	DELETE OBJECT cplayer
+	
+ink rgb(50,75,0),0:box 1,1,101,101:get image 1,0,0,101,101
+if matrix exist(1) = 0  
+     make matrix 1,world_size*10,world_size*10,20,20
+     make_maze()
+ 
+endif
+
+prepare matrix texture 1,1,1,1
+POSITION MATRIX 1,-(world_size*5),-5,-(world_size*5)
+SET MATRIX WIREFRAME OFF 1
+update matrix 1	
+
+	
+Dim animals(Max_creatures) as creature
+
+dim brains(max_creatures) as inputs
+dim hiddens(max_creatures) as hidden
+dim outputs(max_creatures) as output
+
+dim weights1#(max_creatures,i_num,h_num)
+dim weights2#(max_creatures,h_num,o_num)
+
+
+for count = 1 to max_creatures
+  for x= 1 to h_num
+     for y = 1 to i_num
+       weights1#(count, x,y) = (rnd(10000)* .0001) - .5
+     next
+  next
+next
+
+for count = 1 to max_creatures
+  for x= 1 to h_num
+    for y = 1 to o_num
+       weights2#(count, x,y) = (rnd(10000)* .0001) - .5
+    next
+  next
+next
+
+for count = 1 to max_trees
+     make_creature(0,-(world_size*5)+rnd(world_size*10),0,-(world_size*5)+rnd(world_size*10),1,0,0,rnd(20),0,0,0,0)
+next
+for count = 1 to max_trees -1
+    position object count + tree_offset,-(world_size*5)+rnd(world_size*10),0,-(world_size*5)+rnd(world_size*10)
+next
+	
+for count = 1 to max_creatures
+animals(count).kingdom = 0 //rnd(1)
+
+	
+if 	animals(count).kingdom = 0
+	Make_animals:
+    	make_creature(rnd(1),rnd(world_size),0,rnd(world_size),0,rnd(15) + 1,rgb(rnd(255),rnd(255),rnd(255)),rnd(500),RND(45),rnd(50),rnd(150),10 + rnd(15))
+//========== Make all the creatures start with random stats
+select  style
+      case 1
+     	animals(count).neuron.val1.w1= rnd(10000)* .0001
+		animals(count).neuron.val1.w2= rnd(10000)* .0001
+		animals(count).neuron.val1.w3= rnd(10000)* .0001
+		animals(count).neuron.val1.w4= rnd(10000)* .0001
+		animals(count).neuron.val1.w5= rnd(10000)  * .0001
+		
+    	animals(count).neuron.val2.w1= rnd(10000)* .0001
+    	animals(count).neuron.val2.w2= rnd(10000)* .0001
+    	animals(count).neuron.val2.w3= rnd(10000)* .0001
+    	animals(count).neuron.val2.w4= rnd(10000)* .0001
+    	animals(count).neuron.val2.w5= rnd(10000)* .0001
+    	
+    	animals(count).neuron.val3.w1= rnd(10000)* .0001
+    	animals(count).neuron.val3.w2= rnd(10000)* .0001
+    	animals(count).neuron.val3.w3= rnd(10000)* .0001
+    	animals(count).neuron.val3.w4= rnd(10000)* .0001
+    	animals(count).neuron.val3.w5= rnd(10000) * .0001
+    	
+    	animals(count).neuron.val4.w1= rnd(10000)* .0001
+    	animals(count).neuron.val4.w2= rnd(10000)* .0001
+    	animals(count).neuron.val4.w3= rnd(10000)* .0001
+    	animals(count).neuron.val4.w4= rnd(10000)* .0001
+    	animals(count).neuron.val4.w5= rnd(10000) * .0001
+    	
+    	animals(count).neuron.val5.w1= rnd(10000)* .0001
+    	animals(count).neuron.val5.w2= rnd(10000)* .0001
+    	animals(count).neuron.val5.w3= rnd(10000)* .0001
+    	animals(count).neuron.val5.w4= rnd(10000)* .0001
+    	animals(count).neuron.val5.w5= rnd(10000) * .0001
+    	
+    	    	animals(count).neuron.val6.w1= rnd(10000)+ 1
+    	animals(count).neuron.val6.w2= rnd(10000)* .0001
+    	animals(count).neuron.val6.w3= rnd(10000)* .0001
+    	animals(count).neuron.val6.w4= rnd(10000)* .0001
+    	animals(count).neuron.val6.w5= rnd(10000) * .0001
+    	
+    	    	animals(count).neuron.val7.w1= rnd(10000)+ 1
+    	animals(count).neuron.val7.w2= rnd(10000)* .0001
+    	animals(count).neuron.val7.w3= rnd(10000)* .0001
+    	animals(count).neuron.val7.w4= rnd(10000)* .0001
+    	animals(count).neuron.val7.w5= rnd(10000) * .0001
+    	
+    	    	animals(count).neuron.val8.w1= rnd(10000)* .0001
+    	animals(count).neuron.val8.w2= rnd(10000)* .0001
+    	animals(count).neuron.val8.w3= rnd(10000)* .0001
+    	animals(count).neuron.val8.w4= rnd(10000)* .0001
+    	animals(count).neuron.val8.w5= rnd(10000) * .0001
+    	
+    	    	animals(count).neuron.val9.w1= rnd(10000)+ 1
+    	animals(count).neuron.val9.w2= rnd(10000)* .0001
+    	animals(count).neuron.val9.w3= rnd(10000)* .0001
+    	animals(count).neuron.val9.w4= rnd(10000)* .0001
+    	animals(count).neuron.val9.w5= rnd(10000) * .0001
+    	endcase 
+    	case 2 //============== EVEN CONTROLS
+  	    animals(count).neuron.val1.w1= 2000* .0001
+		animals(count).neuron.val1.w2= 2000* .0001
+		animals(count).neuron.val1.w3= 2000* .0001
+		animals(count).neuron.val1.w4= 2000* .0001
+		animals(count).neuron.val1.w5= 2000 * .0001
+		
+    	animals(count).neuron.val2.w1= 2000* .0001
+    	animals(count).neuron.val2.w2= 2000* .0001
+    	animals(count).neuron.val2.w3= 2000* .0001
+    	animals(count).neuron.val2.w4= 2000* .0001
+    	animals(count).neuron.val2.w5= 2000 * .0001
+    	
+    	animals(count).neuron.val3.w1= 2000* .0001
+    	animals(count).neuron.val3.w2= 2000* .0001
+    	animals(count).neuron.val3.w3= 2000* .0001
+    	animals(count).neuron.val3.w4= 2000* .0001
+    	animals(count).neuron.val3.w5= 2000 * .0001
+    	
+    	animals(count).neuron.val4.w1= 2000* .0001
+    	animals(count).neuron.val4.w2= 2000* .0001
+    	animals(count).neuron.val4.w3= 2000* .0001
+    	animals(count).neuron.val4.w4= 2000* .0001
+    	animals(count).neuron.val4.w5= 2000 * .0001
+    		
+    	animals(count).neuron.val5.w1= 2000* .0001
+    	animals(count).neuron.val5.w2= 2000* .0001
+    	animals(count).neuron.val5.w3= 2000* .0001
+    	animals(count).neuron.val5.w4= 2000* .0001
+    	animals(count).neuron.val5.w5= 2000 * .0001
+    	
+    	    	animals(count).neuron.val6.w1= 2000* .0001
+    	animals(count).neuron.val6.w2= 2000* .0001
+    	animals(count).neuron.val6.w3= 2000* .0001
+    	animals(count).neuron.val6.w4= 2000* .0001
+    	animals(count).neuron.val6.w5= 2000 * .0001
+    	
+    	    	animals(count).neuron.val7.w1= 2000* .0001
+    	animals(count).neuron.val7.w2= 2000* .0001
+    	animals(count).neuron.val7.w3= 2000* .0001
+    	animals(count).neuron.val7.w4= 2000* .0001
+    	animals(count).neuron.val7.w5= 2000 * .0001
+    	
+    	    	animals(count).neuron.val8.w1= 2000* .0001
+    	animals(count).neuron.val8.w2= 2000* .0001
+    	animals(count).neuron.val8.w3= 2000* .0001
+    	animals(count).neuron.val8.w4= 2000* .0001
+    	animals(count).neuron.val8.w5= 2000 * .0001
+    	
+    	    	animals(count).neuron.val9.w1= 2000* .0001
+    	animals(count).neuron.val9.w2= 2000* .0001
+    	animals(count).neuron.val9.w3= 2000* .0001
+    	animals(count).neuron.val9.w4= 2000* .0001
+    	animals(count).neuron.val9.w5= 2000 * .0001
+    endcase
+    case 3 //-------------- USER INPUT
+	animals(count).neuron.val1.w1= inputs.val1.w1
+	animals(count).neuron.val1.w2= inputs.val1.w2
+	animals(count).neuron.val1.w3= inputs.val1.w3
+	animals(count).neuron.val1.w4= inputs.val1.w4
+	animals(count).neuron.val1.w5= inputs.val1.w5 * .0001
+	
+    animals(count).neuron.val2.w1= inputs.val2.w1
+    animals(count).neuron.val2.w2= inputs.val2.w2
+    animals(count).neuron.val2.w3= inputs.val2.w3
+    animals(count).neuron.val2.w4= inputs.val2.w4
+    animals(count).neuron.val2.w5= inputs.val2.w5 * .0001
+    
+    animals(count).neuron.val3.w1= inputs.val3.w1
+    animals(count).neuron.val3.w2= inputs.val3.w2
+    animals(count).neuron.val3.w3= inputs.val3.w3
+    animals(count).neuron.val3.w4= inputs.val3.w4
+    animals(count).neuron.val3.w5= inputs.val3.w5 * .0001
+    
+    
+    animals(count).neuron.val4.w1= inputs.val4.w1
+    animals(count).neuron.val4.w2= inputs.val4.w2
+    animals(count).neuron.val4.w3= inputs.val4.w3
+    animals(count).neuron.val4.w4= inputs.val4.w4
+    animals(count).neuron.val4.w5= inputs.val4.w5 * .0001
+    
+    animals(count).neuron.val5.w1= inputs.val5.w1
+    animals(count).neuron.val5.w2= inputs.val5.w2
+    animals(count).neuron.val5.w3= inputs.val5.w3
+    animals(count).neuron.val5.w4= inputs.val5.w4
+    animals(count).neuron.val5.w5= inputs.val5.w5 * .0001
+   endcase
+   
+       	case 4 //============== EVEN CONTROLS
+  	    animals(count).neuron.val1.w1= 5000
+		animals(count).neuron.val1.w2= 5000
+		animals(count).neuron.val1.w3= 5000
+		animals(count).neuron.val1.w4= 5000
+		animals(count).neuron.val1.w5= 5000 * .0001
+		
+    	animals(count).neuron.val2.w1= 5000
+    	animals(count).neuron.val2.w2= 5000
+    	animals(count).neuron.val2.w3= 5000
+    	animals(count).neuron.val2.w4= 5000
+    	animals(count).neuron.val2.w5= 5000 * .0001
+    	
+    	animals(count).neuron.val3.w1= 5000
+    	animals(count).neuron.val3.w2= 5000
+    	animals(count).neuron.val3.w3= 5000
+    	animals(count).neuron.val3.w4= 5000
+    	animals(count).neuron.val3.w5= 5000 * .0001
+    	
+    	animals(count).neuron.val4.w1= 5000
+    	animals(count).neuron.val4.w2= 5000
+    	animals(count).neuron.val4.w3= 5000
+    	animals(count).neuron.val4.w4= 5000
+    	animals(count).neuron.val4.w5= 5000 * .0001
+    		
+    	animals(count).neuron.val5.w1= 5000
+    	animals(count).neuron.val5.w2= 5000
+    	animals(count).neuron.val5.w3= 5000
+    	animals(count).neuron.val5.w4= 5000
+    	animals(count).neuron.val5.w5= 5000 * .0001
+    	
+    	    	animals(count).neuron.val6.w1= 5000
+    	animals(count).neuron.val6.w2= 5000
+    	animals(count).neuron.val6.w3= 5000
+    	animals(count).neuron.val6.w4= 5000
+    	animals(count).neuron.val6.w5= 5000 * .0001
+    	
+    	    	animals(count).neuron.val7.w1= 5000
+    	animals(count).neuron.val7.w2= 5000
+    	animals(count).neuron.val7.w3= 5000
+    	animals(count).neuron.val7.w4= 5000
+    	animals(count).neuron.val7.w5= 5000 * .0001
+    	
+    	    	animals(count).neuron.val8.w1= 5000
+    	animals(count).neuron.val8.w2= 5000
+    	animals(count).neuron.val8.w3= 5000
+    	animals(count).neuron.val8.w4= 5000
+    	animals(count).neuron.val8.w5= 5000 * .0001
+    	
+    	    	animals(count).neuron.val9.w1= 5000
+    	animals(count).neuron.val9.w2= 5000
+    	animals(count).neuron.val9.w3= 5000
+    	animals(count).neuron.val9.w4= 5000
+    	animals(count).neuron.val9.w5= 5000 * .0001
+    endcase
+endselect
+endif
+next
+
+endfunction
+//============================================================================================================================================
+//            SIGHT Functions                                                                          
+//============================================================================================================================================
+function CREATURE_TRAINER()
+
+while keystate(1) = false
+
+ SET CURSOR 0,0
+  print current camera()
+  Print "Press Enter then Enter the amount of Creatures you wish to spawn"
+  Print "TOP LEFT  3 = Wall"
+  Print "TOP RIGHT 4 = Enemy"
+  Print "BOTTOM LEFT  2 = Mate"
+  Print "BOTTOM RIGHT 1 = Food"
+  
+     if leftkey() = 1 then yROTATE OBJECT cplayer, OBJECT ANGLE Y(cplayer)-.3
+     if rightkey() = 1 then yROTATE OBJECT cplayer, OBJECT ANGLE Y(cplayer)+.3
+     if upkey() = 1 then MOVE OBJECT cplayer,.1
+     if downkey() = 1 then MOVE OBJECT cplayer,-.1
+      
+     POSITION OBJECT csight,object position x(cplayer),object position y(cplayer),object position z(cplayer)
+     rotate object csight, OBJECT ANGLE X (cplayer),OBJECT ANGLE y (cplayer),OBJECT ANGLE z (cplayer)
+      
+     set OBJECT COLLISION off cplayer;set OBJECT COLLISION on csight
+     
+     sees = OBJECT COLLISION (csight,0)
+     if sees = 0 
+     	if upkey() = true
+     	sight_trainer(sees,1)
+     	endif
+     	if downkey() = true
+     	sight_trainer(sees,2)
+     	endif
+     	if leftkey() = true
+     	sight_trainer(sees,3)
+     	endif
+     	if rightkey() = true
+     	sight_trainer(sees,4)
+     	endif
+     	if scancode() = 0
+     	sight_trainer(sees,5)
+     endif
+     endif
+      
+     if sees <>0 
+     	if upkey() = true
+     	sight_trainer(sees,1)
+     	endif
+     	if downkey() = true
+     	sight_trainer(sees,2)
+     	endif
+     	if leftkey() = true
+     	sight_trainer(sees,3)
+     	endif
+     	if rightkey() = true
+     	sight_trainer(sees,4)
+     	endif
+     	if scancode() = 0
+     	sight_trainer(sees,5)
+     endif
+     	
+     	
+     	
+     	 print "Player sees object:" ;OBJECT COLLISION (csight,0)
+      
+      endif
+      
+      if keystate(28) = true 
+          wait 500
+      	  init_creatures(3)
+      	  move_creatures()
+      endif
+      if keystate(19) = true
+          wait 500
+      	  init_creatures(1)
+      	  move_creatures()
+      endif
+      if keystate(18) = true
+          wait 500
+      	  init_creatures(2)
+      	  move_creatures()
+      endif
+     set OBJECT COLLISION off csight;set OBJECT COLLISION on cplayer
+    
+    PRINT "FORWARD: BACKWARDS: UP: DOWN: NULL"
+    
+    print print_weight(inputs.val1.w1);"  :"; print_weight(inputs.val1.w2);"  :";inputs.val1.w3;" :";inputs.val1.w4;" :";inputs.val1.w5  
+    print print_weight(inputs.val2.w1);"  :"; print_weight(inputs.val2.w2);"  :";inputs.val2.w3;" :";inputs.val2.w4;" :";inputs.val2.w5  
+    print inputs.val3.w1;"  :";inputs.val3.w2;"  :";inputs.val3.w3;" :";inputs.val3.w4;" :";inputs.val3.w5   
+    print inputs.val4.w1;"  :";inputs.val4.w2;"  :";inputs.val4.w3;" :";inputs.val4.w4;" :";inputs.val4.w5   
+    print inputs.val5.w1;"  :";inputs.val5.w2;"  :";inputs.val5.w3;" :";inputs.val5.w4;" :";inputs.val5.w5   
+          
+     sync
+     
+ 
+endwhile
+endfunction
+FUNCTION sight_handler(count,in)
+ret = 0
+sight = count + eyeoffset
+POSITION OBJECT sight,object position x(count),object position y(count),object position z(count) 
+rotate object sight, OBJECT ANGLE X (count),OBJECT ANGLE y (count),OBJECT ANGLE z (count)
+set OBJECT COLLISION off count;set OBJECT COLLISION on sight
+sees = OBJECT COLLISION (sight,0)
+if sees = 0
+		brains(count).food = 0
+		brains(count).mate = 0
+		brains(count).enemy = 0
+		brains(count).wall = 0
+		brains(count).nothing =1
+endif // sees nothing
+if sees <> 0 and sees < max_creatures
+	if animals(sees).sex <> animals(count).sex	
+		brains(count).food = 0
+		brains(count).mate = 1
+		brains(count).enemy = 0
+		brains(count).wall = 0
+		brains(count).nothing =0
+	ENDIF
+	
+	if animals(sees).sex = animals(count).sex  
+		brains(count).food = 0
+		brains(count).mate = 0
+		brains(count).enemy = 1
+		brains(count).wall = 0
+		brains(count).nothing =0
+	endif
+endif   
+    
+	if sees > tree_offset
+		brains(count).food = 1
+		brains(count).mate = 0
+		brains(count).enemy = 0
+		brains(count).wall = 0
+		brains(count).nothing =0
+	endif           // food
+	
+    if sees > wall_offset 
+    	brains(count).food = 0
+		brains(count).mate = 0
+		brains(count).enemy = 0
+		brains(count).wall = 1
+		brains(count).nothing =0
+    endif   
+
+set OBJECT COLLISION off sight;set OBJECT COLLISION on count
+
+
+BRAINS(count).H1  = (brains(count).food * weights1#(count,1,1)) + (brains(count).mate * weights1#(count,2,1)) + (brains(count).mate * weights1#(count,3,1))+ (brains(count).mate * weights1#(count,4,1))+ (brains(count).mate * weights1#(count,5,1))
+BRAINS(count).H2  = (brains(count).food * weights1#(count,1,2)) + (brains(count).mate * weights1#(count,2,2)) + (brains(count).mate * weights1#(count,3,2))+ (brains(count).mate * weights1#(count,4,2))+ (brains(count).mate * weights1#(count,5,2))
+BRAINS(count).H3  = (brains(count).food * weights1#(count,1,3)) + (brains(count).mate * weights1#(count,2,3)) + (brains(count).mate * weights1#(count,3,3))+ (brains(count).mate * weights1#(count,4,3))+ (brains(count).mate * weights1#(count,5,3))
+BRAINS(count).H4  = (brains(count).food * weights1#(count,1,4)) + (brains(count).mate * weights1#(count,2,4)) + (brains(count).mate * weights1#(count,3,4))+ (brains(count).mate * weights1#(count,4,4))+ (brains(count).mate * weights1#(count,5,4))
+BRAINS(count).H5  = (brains(count).food * weights1#(count,1,5)) + (brains(count).mate * weights1#(count,2,5)) + (brains(count).mate * weights1#(count,3,5))+ (brains(count).mate * weights1#(count,4,5))+ (brains(count).mate * weights1#(count,5,5))
+
+OUTPUTS(count).TURN = (BRAINS(count).H1 * weights2#(count,1,1)) + (BRAINS(count).H2* weights2#(count,2,1)) + (BRAINS(count).H3 * weights2#(count,3,1))+ (BRAINS(count).H4 * weights2#(count,4,1))+ (BRAINS(count).H5 * weights2#(count,5,1))
+OUTPUTS(count).DIRECTION = (BRAINS(count).H1 * weights2#(count,1,2)) + (BRAINS(count).H2 * weights2#(count,2,2)) + (BRAINS(count).H3 * weights2#(count,3,2))+ (BRAINS(count).H4* weights2#(count,4,2))+ (BRAINS(count).H5 * weights2#(count,5,2))
+
+MOVE OBJECT count,OUTPUTS(count).DIRECTION * animals(count).speed
+YROTATE OBJECT count,object angle y(count) + OUTPUTS(count).TURN * 360
+
+endfunction ret
+FUNCTION sight_trainer(in,key)
+  
+    select in
+	     case 2:  // food
+	         select key
+	              case 1:    
+	                   inputs.val1.w1 = increase(inputs.val1.w1) 
+	                   inputs.val1.w2 = decrease(inputs.val1.w2)
+	                   inputs.val1.w3 = decrease(inputs.val1.w3)
+	                   inputs.val1.w4 = decrease(inputs.val1.w4)
+	                   inputs.val1.w5 = decrease(inputs.val1.w5)
+	              endcase
+	              case 2:
+	              	   inputs.val1.w1 = decrease(inputs.val1.w1) 
+	                   inputs.val1.w2 = increase(inputs.val1.w2)
+	                   inputs.val1.w3 = decrease(inputs.val1.w3)
+	                   inputs.val1.w4 = decrease(inputs.val1.w4)
+	                   inputs.val1.w5 = decrease(inputs.val1.w5)
+	              endcase
+	              case 3:
+	              	   inputs.val1.w1 = decrease(inputs.val1.w1) 
+	                   inputs.val1.w2 = decrease(inputs.val1.w2)
+	                   inputs.val1.w3 = increase(inputs.val1.w3)
+	                   inputs.val1.w4 = decrease(inputs.val1.w4)
+	                   inputs.val1.w5 = decrease(inputs.val1.w5)
+	              endcase
+	              case 4:
+	              	   inputs.val1.w1 = decrease(inputs.val1.w1) 
+	                   inputs.val1.w2 = decrease(inputs.val1.w2)
+	                   inputs.val1.w3 = decrease(inputs.val1.w3)
+	                   inputs.val1.w4 = increase(inputs.val1.w4)
+	                   inputs.val1.w5 = decrease(inputs.val1.w5)
+	              endcase
+	              case 5:
+	              	   inputs.val1.w1 = decrease(inputs.val1.w1) 
+	                   inputs.val1.w2 = decrease(inputs.val1.w2)
+	                   inputs.val1.w3 = decrease(inputs.val1.w3)
+	                   inputs.val1.w4 = decrease(inputs.val1.w4)
+	                   inputs.val1.w5 = increase(inputs.val1.w5)	              
+	              endcase
+	         endselect
+	         
+	     endcase
+	     case 1:  // mate
+	         select key
+	              case 1:    
+	                   inputs.val2.w1 = increase(inputs.val2.w1) 
+	                   inputs.val2.w2 = decrease(inputs.val2.w2)
+	                   inputs.val2.w3 = decrease(inputs.val2.w3)
+	                   inputs.val2.w4 = decrease(inputs.val2.w4)
+	                   inputs.val2.w5 = decrease(inputs.val2.w5)
+	              endcase
+	              case 2:
+	              	   inputs.val2.w1 = decrease(inputs.val2.w1) 
+	                   inputs.val2.w2 = increase(inputs.val2.w2)
+	                   inputs.val2.w3 = decrease(inputs.val2.w3)
+	                   inputs.val2.w4 = decrease(inputs.val2.w4)
+	                   inputs.val2.w5 = decrease(inputs.val2.w5)
+	              endcase
+	              case 3:
+	              	   inputs.val2.w1 = decrease(inputs.val2.w1) 
+	                   inputs.val2.w2 = decrease(inputs.val2.w2)
+	                   inputs.val2.w3 = increase(inputs.val2.w3)
+	                   inputs.val2.w4 = decrease(inputs.val2.w4)
+	                   inputs.val2.w5 = decrease(inputs.val2.w5)
+	              endcase
+	              case 4:
+	              	   inputs.val2.w1 = decrease(inputs.val2.w1) 
+	                   inputs.val2.w2 = decrease(inputs.val2.w2)
+	                   inputs.val2.w3 = decrease(inputs.val2.w3)
+	                   inputs.val2.w4 = increase(inputs.val2.w4)
+	                   inputs.val2.w5 = decrease(inputs.val2.w5)
+	              endcase
+	              case 5:
+	              	   inputs.val2.w1 = decrease(inputs.val2.w1) 
+	                   inputs.val2.w2 = decrease(inputs.val2.w2)
+	                   inputs.val2.w3 = decrease(inputs.val2.w3)
+	                   inputs.val2.w4 = decrease(inputs.val2.w4)
+	                   inputs.val2.w5 = increase(inputs.val2.w5)	              
+	              endcase
+	         endselect
+	     endcase
+	     case 3: // enemy
+	         select key
+	              case 1:    
+	                   inputs.val3.w1 = increase(inputs.val3.w1) 
+	                   inputs.val3.w2 = decrease(inputs.val3.w2)
+	                   inputs.val3.w3 = decrease(inputs.val3.w3)
+	                   inputs.val3.w4 = decrease(inputs.val3.w4)
+	                   inputs.val3.w5 = decrease(inputs.val3.w5)
+	              endcase
+	              case 2:
+	              	   inputs.val3.w1 = decrease(inputs.val3.w1) 
+	                   inputs.val3.w2 = increase(inputs.val3.w2)
+	                   inputs.val3.w3 = decrease(inputs.val3.w3)
+	                   inputs.val3.w4 = decrease(inputs.val3.w4)
+	                   inputs.val3.w5 = decrease(inputs.val3.w5)
+	              endcase
+	              case 3:
+	              	   inputs.val3.w1 = decrease(inputs.val3.w1) 
+	                   inputs.val3.w2 = decrease(inputs.val3.w2)
+	                   inputs.val3.w3 = increase(inputs.val3.w3)
+	                   inputs.val3.w4 = decrease(inputs.val3.w4)
+	                   inputs.val3.w5 = decrease(inputs.val3.w5)
+	              endcase
+	              case 4:
+	              	   inputs.val3.w1 = decrease(inputs.val3.w1) 
+	                   inputs.val3.w2 = decrease(inputs.val3.w2)
+	                   inputs.val3.w3 = decrease(inputs.val3.w3)
+	                   inputs.val3.w4 = increase(inputs.val3.w4)
+	                   inputs.val3.w5 = decrease(inputs.val3.w5)
+	              endcase
+	              case 5:
+	              	   inputs.val3.w1 = decrease(inputs.val3.w1) 
+	                   inputs.val3.w2 = decrease(inputs.val3.w2)
+	                   inputs.val3.w3 = decrease(inputs.val3.w3)
+	                   inputs.val3.w4 = decrease(inputs.val3.w4)
+	                   inputs.val3.w5 = increase(inputs.val3.w5)	              
+	              endcase
+	         endselect
+	     endcase
+
+     case 4: // enemy
+	         select key
+	              case 1:    
+	                   inputs.val5.w1 = increase(inputs.val5.w1) 
+	                   inputs.val5.w2 = decrease(inputs.val5.w2)
+	                   inputs.val5.w3 = decrease(inputs.val5.w3)
+	                   inputs.val5.w4 = decrease(inputs.val5.w4)
+	                   inputs.val5.w5 = decrease(inputs.val5.w5)
+	              endcase
+	              case 2:
+	              	   inputs.val5.w1 = decrease(inputs.val5.w1) 
+	                   inputs.val5.w2 = increase(inputs.val5.w2)
+	                   inputs.val5.w3 = decrease(inputs.val5.w3)
+	                   inputs.val5.w4 = decrease(inputs.val5.w4)
+	                   inputs.val5.w5 = decrease(inputs.val5.w5)
+	              endcase
+	              case 3:
+	              	   inputs.val5.w1 = decrease(inputs.val5.w1) 
+	                   inputs.val5.w2 = decrease(inputs.val5.w2)
+	                   inputs.val5.w3 = increase(inputs.val5.w3)
+	                   inputs.val5.w4 = decrease(inputs.val5.w4)
+	                   inputs.val5.w5 = decrease(inputs.val5.w5)
+	              endcase
+	              case 4:
+	              	   inputs.val5.w1 = decrease(inputs.val5.w1) 
+	                   inputs.val5.w2 = decrease(inputs.val5.w2)
+	                   inputs.val5.w3 = decrease(inputs.val5.w3)
+	                   inputs.val5.w4 = increase(inputs.val5.w4)
+	                   inputs.val5.w5 = decrease(inputs.val5.w5)
+	              endcase
+	              case 5:
+	              	   inputs.val5.w1 = decrease(inputs.val5.w1) 
+	                   inputs.val5.w2 = decrease(inputs.val5.w2)
+	                   inputs.val5.w3 = decrease(inputs.val5.w3)
+	                   inputs.val5.w4 = decrease(inputs.val5.w4)
+	                   inputs.val5.w5 = increase(inputs.val5.w5)	              
+	              endcase
+	         endselect
+	     endcase
+
+	     
+	     
+	       case 0:  
+	         select key
+	              case 1:    
+	                   inputs.val4.w1 = increase(inputs.val4.w1) 
+	                   inputs.val4.w2 = decrease(inputs.val4.w2)
+	                   inputs.val4.w3 = decrease(inputs.val4.w3)
+	                   inputs.val4.w4 = decrease(inputs.val4.w4)
+	                   inputs.val4.w5 = decrease(inputs.val4.w5)
+	              endcase
+	              case 2:
+	              	   inputs.val4.w1 = decrease(inputs.val4.w1) 
+	                   inputs.val4.w2 = increase(inputs.val4.w2)
+	                   inputs.val4.w3 = decrease(inputs.val4.w3)
+	                   inputs.val4.w4 = decrease(inputs.val4.w4)
+	                   inputs.val4.w5 = decrease(inputs.val4.w5)
+	              endcase
+	              case 3:
+	              	   inputs.val4.w1 = decrease(inputs.val4.w1) 
+	                   inputs.val4.w2 = decrease(inputs.val4.w2)
+	                   inputs.val4.w3 = increase(inputs.val4.w3)
+	                   inputs.val4.w4 = decrease(inputs.val4.w4)
+	                   inputs.val4.w5 = decrease(inputs.val4.w5)
+	              endcase
+	              case 4:
+	              	   inputs.val4.w1 = decrease(inputs.val4.w1) 
+	                   inputs.val4.w2 = decrease(inputs.val4.w2)
+	                   inputs.val4.w3 = decrease(inputs.val4.w3)
+	                   inputs.val4.w4 = increase(inputs.val4.w4)
+	                   inputs.val4.w5 = decrease(inputs.val4.w5)
+	              endcase
+	              case 5:
+	              	   inputs.val4.w1 = decrease(inputs.val4.w1) 
+	                   inputs.val4.w2 = decrease(inputs.val4.w2)
+	                   inputs.val4.w3 = decrease(inputs.val4.w3)
+	                   inputs.val4.w4 = decrease(inputs.val4.w4)
+	                   inputs.val4.w5 = increase(inputs.val4.w5)	              
+	              endcase
+	         endselect
+	         
+	     endcase
+    endselect 	  
+  
+  
+endfunction
+//============================================================================================================================================
+//           Creature Creation functions                                                                        
+//============================================================================================================================================
+function make_creature(sex,x,y,z,kingdom,speed,color,age,turnspeed as float,fov,sdist,size)
+
+count = 0
+//===== MAKE A TREE =======  		
+if kingdom = 1	
+	if tree_population => max_trees then exitfunction 
+	while OBJECT EXIST(count+tree_offset) = 1
+	     inc count
+	endwhile
+	//MAKE OBJECT cone count + tree_offset,50
+	MAKE OBJECT sphere count + tree_offset,8
+	//MAKE OBJECT TRIANGLE count + tree_offset, 0, 0, 0, 25, 0,25, -25, 25,-25
+
+
+	COLOR OBJECT count+tree_offset,RGB(0,rnd(255),0)
+	POSITION OBJECT count+tree_offset,x,0,z
+	inc tree_population
+endif
+
+if population => max_creatures then exitfunction
+    count = 1
+    while OBJECT EXIST(count) = 1
+        inc count
+    endwhile
+    if size < 10 then size = 10
+    if speed < 6 then speed = 6
+  
+if kingdom = 0
+if sex = 0 then Majority_sex = Majority_sex - 1
+if sex = 1 then Majority_sex = Majority_sex + 1
+	sight = count + EYEOFFSET
+	MAKE OBJECT TRIANGLE sight,0,0,0,-(fov),0,sdist,fov,0,sdist
+	//MAKE OBJECT TRIANGLE sight,0,0,0,-30,0,150,30,0,150	
+	SET OBJECT collision to polygons sight
+	set OBJECT COLLISION off sight
+	HIDE OBJECT sight
+	animals(count).position.x = x
+	animals(count).position.z = z
+	animals(count).sex = rnd(1)
+	animals(count).speed = speed
+	animals(count).kingdom = kingdom
+	animals(count).color = color
+	animals(count).age = age
+	animals(count).health = max_health 
+	animals(count).turn_speed = turnspeed
+	animals(count).fov = fov
+	animals(count).sight_dist = sdist
+	animals(count).size = size
+	if animals(count).sex = 0 
+		MAKE OBJECT cone count,size+5;
+		COLOR OBJECT count,color
+	endif
+	if animals(count).sex = 1 
+		MAKE OBJECT cone count,size;
+		COLOR OBJECT count,color - 4000
+	endif
+	
+	POSITION OBJECT count,x,y,z
+	XROTATE OBJECT count,90
+	SET OBJECT cull count,0
+	FIX OBJECT PIVOT count
+	YROTATE OBJECT count,rnd(360)
+	inc population   
+	AUTOMATIC OBJECT COLLISION count, size, 0
+
+
+endif       
+        
+endfunction count
+function breed(creature1, creature2)
+ Mr = 300
+ //if animals(creature1).kingdom <> animals(creature2).kingdom then exitfunction
+    if population => max_creatures then exitfunction
+	nur = animals(creature1).neuron 
+	if animals(creature1).kingdom = 0 
+	    count =  make_creature(rnd(1),animals(creature1).position.x+rnd(5),0,animals(creature1).position.z+rnd(5),0,animals(creature1).speed + (1.5 * rnd(2)-1),animals(creature1).color+ rgb(rnd(mr/100),rnd(mr/100),rnd(mr/100)),rnd(20),animals(creature1).turn_speed+(RND(2)-1),animals(creature1).fov+(rnd(2)-1),animals(creature1).sight_dist+(rnd(2)-1),((animals(creature1).size+animals(creature2).size)/2) +(rnd(2)-1))
+		animals(count).neuron = nur 
+        POSITION OBJECT count,animals(count).position.x,0,animals(count).position.z
+    
+       
+    animals(count).neuron.val1.w1= (animals(creature1).neuron.val1.w1 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val1.w2= (animals(creature1).neuron.val1.w2 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val1.w3= (animals(creature1).neuron.val1.w3 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val1.w4= (animals(creature1).neuron.val1.w4 ) + (mr - rnd(mr * 2)) * .0001 
+	animals(count).neuron.val1.w5= (animals(creature1).neuron.val1.w5 ) + (mr - rnd(mr * 2)) * .0001 
+	
+	animals(count).neuron.val2.w1= (animals(creature1).neuron.val2.w1 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val2.w2= (animals(creature1).neuron.val2.w2 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val2.w3= (animals(creature1).neuron.val2.w3 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val2.w4= (animals(creature1).neuron.val2.w4 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val2.w5= (animals(creature1).neuron.val2.w5 ) + (mr - rnd(mr * 2)) * .0001
+
+    animals(count).neuron.val3.w1= (animals(creature1).neuron.val3.w1 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val3.w2= (animals(creature1).neuron.val3.w2 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val3.w3= (animals(creature1).neuron.val3.w3 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val3.w4= (animals(creature1).neuron.val3.w4 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val3.w5= (animals(creature1).neuron.val3.w5 ) + (mr - rnd(mr * 2)) * .0001
+
+    animals(count).neuron.val4.w1= (animals(creature1).neuron.val4.w1 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val4.w2= (animals(creature1).neuron.val4.w2 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val4.w3= (animals(creature1).neuron.val4.w3 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val4.w4= (animals(creature1).neuron.val4.w4 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val4.w5= (animals(creature1).neuron.val4.w5 ) + (mr - rnd(mr * 2)) * .0001
+    
+    animals(count).neuron.val5.w1= (animals(creature1).neuron.val5.w1 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val5.w2= (animals(creature1).neuron.val5.w2 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val5.w3= (animals(creature1).neuron.val5.w3 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val5.w4= (animals(creature1).neuron.val5.w4 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val5.w5= (animals(creature1).neuron.val5.w5 ) + (mr - rnd(mr * 2)) * .0001
+	
+	
+    
+    animals(count).neuron.val6.w1= (animals(creature1).neuron.val6.w1 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val6.w2= (animals(creature1).neuron.val6.w2 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val6.w3= (animals(creature1).neuron.val6.w3 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val6.w4= (animals(creature1).neuron.val6.w4 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val6.w5= (animals(creature1).neuron.val6.w5 ) + (mr - rnd(mr * 2)) * .0001
+	
+    animals(count).neuron.val7.w1= (animals(creature1).neuron.val7.w1 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val7.w2= (animals(creature1).neuron.val7.w2 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val7.w3= (animals(creature1).neuron.val7.w3 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val7.w4= (animals(creature1).neuron.val7.w4 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val7.w5= (animals(creature1).neuron.val7.w5 ) + (mr - rnd(mr * 2)) * .0001
+	
+    animals(count).neuron.val8.w1= (animals(creature1).neuron.val8.w1 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val8.w2= (animals(creature1).neuron.val8.w2 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val8.w3= (animals(creature1).neuron.val8.w3 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val8.w4= (animals(creature1).neuron.val8.w4 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val8.w5= (animals(creature1).neuron.val8.w5 ) + (mr - rnd(mr * 2)) * .0001
+
+    animals(count).neuron.val9.w1= (animals(creature1).neuron.val9.w1 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val9.w2= (animals(creature1).neuron.val9.w2 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val9.w3= (animals(creature1).neuron.val9.w3 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val9.w4= (animals(creature1).neuron.val9.w4 ) + (mr - rnd(mr * 2))* .0001 
+	animals(count).neuron.val9.w5= (animals(creature1).neuron.val9.w5 ) + (mr - rnd(mr * 2)) * .0001
+
+
+
+ MUTAT = RND(1000)
+ If MUTAT < 3   
+ print "MUTATE"
+
+     animals(count).neuron.val1.w1= rnd(10000)* .0001 
+	animals(count).neuron.val1.w2= rnd(10000)* .0001 
+	animals(count).neuron.val1.w3= rnd(10000)* .0001 
+	animals(count).neuron.val1.w4= rnd(10000)* .0001 
+	animals(count).neuron.val1.w5= rnd(10000) * .0001
+	
+	animals(count).neuron.val2.w1= rnd(10000)* .0001 
+	animals(count).neuron.val2.w2= rnd(10000)* .0001 
+	animals(count).neuron.val2.w3= rnd(10000)* .0001 
+	animals(count).neuron.val2.w4= rnd(10000)* .0001 
+	animals(count).neuron.val2.w5= rnd(10000) * .0001
+
+    animals(count).neuron.val3.w1= rnd(10000)* .0001 
+	animals(count).neuron.val3.w2=rnd(10000)* .0001 
+	animals(count).neuron.val3.w3= rnd(10000)* .0001 
+	animals(count).neuron.val3.w4= rnd(10000)* .0001 
+	animals(count).neuron.val3.w5= rnd(10000) * .0001
+
+    animals(count).neuron.val4.w1= rnd(10000)* .0001 
+	animals(count).neuron.val4.w2= rnd(10000)* .0001 
+	animals(count).neuron.val4.w3= rnd(10000)* .0001 
+	animals(count).neuron.val4.w4=rnd(10000)* .0001 
+	animals(count).neuron.val4.w5= rnd(10000) * .0001
+
+    
+    animals(count).neuron.val5.w1= rnd(10000)* .0001 
+	animals(count).neuron.val5.w2= rnd(10000)* .0001 
+	animals(count).neuron.val5.w3= rnd(10000)* .0001 
+	animals(count).neuron.val5.w4= rnd(10000)* .0001 
+	animals(count).neuron.val5.w5= rnd(10000) * .0001
+	
+	animals(count).neuron.val6.w1= rnd(10000)* .0001 
+	animals(count).neuron.val6.w2= rnd(10000)* .0001 
+	animals(count).neuron.val6.w3= rnd(10000)* .0001 
+	animals(count).neuron.val6.w4= rnd(10000)* .0001 
+	animals(count).neuron.val6.w5= rnd(10000) * .0001
+	
+	animals(count).neuron.val7.w1= rnd(10000)* .0001 
+	animals(count).neuron.val7.w2= rnd(10000)* .0001 
+	animals(count).neuron.val7.w3= rnd(10000)* .0001 
+	animals(count).neuron.val7.w4= rnd(10000)* .0001 
+	animals(count).neuron.val7.w5= rnd(10000) * .0001
+	
+	animals(count).neuron.val8.w1= rnd(10000)* .0001 
+	animals(count).neuron.val8.w2= rnd(10000)* .0001 
+	animals(count).neuron.val8.w3= rnd(10000)* .0001 
+	animals(count).neuron.val8.w4= rnd(10000)* .0001 
+	animals(count).neuron.val8.w5= rnd(10000) * .0001
+	   
+	animals(count).neuron.val9.w1= rnd(10000)* .0001 
+	animals(count).neuron.val9.w2= rnd(10000)* .0001 
+	animals(count).neuron.val9.w3= rnd(10000)* .0001 
+	animals(count).neuron.val9.w4= rnd(10000)* .0001 
+	animals(count).neuron.val9.w5= rnd(10000) * .0001
+	
+	animals(count).color = rgb(RND(255),RND(255),RND(255))
+	COLOR OBJECT count,animals(count).color
+endif   
+endif
+
+endfunction 
+function SELECTIVE_BREEDING(creature)
+count = 1
+for count = 1 to max_creatures    
+    while OBJECT EXIST(count) = 1
+        inc count
+    endwhile
+   if animals(count).kingdom = 0 then animals(count) = animals(creature)
+next
+endfunction
+//============================================================================================================================================
+//            CORE Functions                                                                          
+//============================================================================================================================================
+Function print_stats(creature1 as integer )	
+ink rgb(100,100,200)
+	print "Creature:";creature1;" "
+	Print "Sex:";"  ";
+	if animals(creature1).sex = 0 then print "Male ";
+	if animals(creature1).sex = 1 then print "Female ";
+	print "Majority Sex:";Majority_sex; " ";
+	PRINT "Speed:";(animals(creature1).speed);" ";
+	print "Population:"; population;" ";
+	print "Health:";animals(creature1).health;" ";
+	
+	print "AGE:";animals(creature1).age;" ";
+	print "Turn Speed:";animals(creature1).turn_speed
+    print "FOV:";animals(creature1).fov;" ";
+    print "Vision:";animals(creature1).sight_dist;" ";
+	print "Size:";animals(creature1).size;" ";
+    print "Average size:";AVGSIZE / max_creatures
+   
+   print weights1#(creature1,2,3)
+   print OUTPUTS(creature1).DIRECTION
+print OUTPUTS(creature1).turn
+   print (BRAINS(creature1).H1 * weights2#(creature1,1,1)) + (BRAINS(creature1).H2* weights2#(creature1,2,1)) + (BRAINS(count).H3 * weights2#(count,3,1))+ (BRAINS(creature1).H4 * weights2#(creature1,4,1))+ (BRAINS(count).H5 * weights2#(creature1,5,1))
+
+   
+    print "Food :"; avgval11 / population;" :"; avgval12 / population;" :"; avgval13 / population;" :"; avgval14 / population;" :"; avgval15 / population 
+    print "Mate :"; avgval21 / population;" :"; avgval22 / population;" :"; avgval23 / population;" :"; avgval24 / population;" :"; avgval25 / population  
+    print "Enemy :"; avgval31 / population;" :"; avgval32 / population;" :"; avgval33 / population;" :"; avgval34 / population;" :"; avgval35 / population     
+    print "Default :"; avgval41 / population;" :"; avgval42 / population;" :"; avgval43 / population;" :"; avgval44 / population;" :"; avgval45 / population  
+    print "Wall :"; avgval51 / population;" :"; avgval52 / population;" :"; avgval53 / population;" :"; avgval54 / population;" :"; avgval55 / population  
+   
+//   print "Default :";animals(creature1).neuron.val4.w1;" :";animals(creature1).neuron.val4.w2;" :";animals(creature1).neuron.val4.w3;" :";animals(creature1).neuron.val4.w4;" :";animals(creature1).neuron.val4.w5
+     print ""
+     print "Collisions"
+     print "Food :";animals(creature1).neuron.val6.w1;" :";animals(creature1).neuron.val6.w2;" :";animals(creature1).neuron.val6.w3;" :";animals(creature1).neuron.val6.w4;" :";animals(creature1).neuron.val6.w5  
+     print "Mate :";animals(creature1).neuron.val7.w1;" :";animals(creature1).neuron.val7.w2;" :";animals(creature1).neuron.val7.w3;" :";animals(creature1).neuron.val7.w4;" :";animals(creature1).neuron.val7.w5  
+     print "Enemy :";animals(creature1).neuron.val8.w1;" :";animals(creature1).neuron.val8.w2;" :";animals(creature1).neuron.val8.w3;" :";animals(creature1).neuron.val8.w4;" :";animals(creature1).neuron.val8.w5
+     print "Wall :";animals(creature1).neuron.val9.w1;" :";animals(creature1).neuron.val9.w2;" :";animals(creature1).neuron.val9.w3;" :";animals(creature1).neuron.val9.w4;" :";animals(creature1).neuron.val9.w5
+
+
+y=SCREEN HEIGHT() - 2
+
+// Age
+ink rgb(0,255,0)
+box 1,y - 5,longest_lived / 20,y
+ink rgb(255,0,0)
+box 1,y - 5,((avgage / population) /20),y
+
+// health
+ink rgb(0,255,0)
+box 1,y - 11,highest_health / 100,y - 6
+ink rgb(255,0,0)
+box 1,y - 11,((avghealth / population) /100),y - 6
+
+// Speed
+ink rgb(0,255,0)
+box 1,y-35,highest_speed,y-30
+ink rgb(255,0,0)
+box 1,y-35,avgspeed/ population,y-30
+
+//turnspeed
+ink rgb(0,255,0)
+box 1,y-29,45,y-24
+ink rgb(255,0,0)
+box 1,y-29,avgturn/ population,y-24
+
+//Field of view
+ink rgb(0,255,0)
+box 1,y-23,50,y-18
+ink rgb(255,0,0)
+box 1,y-23,avgfov/ population,y-18
+// sight
+
+
+ink rgb(0,255,0)
+box 1,y-17,150,y-12
+ink rgb(255,0,0)
+box 1,y-17,avgsight/ population,y-12
+
+ink rgb(100,100,200)
+//print "Health:";AVGHEALTH / max_creatures
+//print "Age:";AVGAGE / max_creatures
+//print "Longest Lived:";Longest_lived
+endfunction
+function increase(var#)
+	val# = var# + (((10000-var#) / Learning_constant))
+endfunction val#
+function decrease(var#)
+	val# = var# - (var# / learning_constant) 
+endfunction val#
+//========================== MOVE CREATURES ----------- MAIN LOOP -----------
+function move_creatures()
+//for qweq = 0 to 1 step 0
+do
+AVGSPEED = 0
+AVGHEALTH = 0
+AVGAGE = 0
+AVGFOV = 0
+AVGSIGHT = 0
+AVGTURN = 0
+AVGsize = 0
+
+avgval11=0
+avgval12=0
+avgval13=0
+avgval14=0
+avgval15=0
+
+avgval21=0
+avgval22=0
+avgval23=0
+avgval24=0
+avgval25=0
+
+avgval31=0
+avgval32=0
+avgval33=0
+avgval34=0
+avgval35=0
+
+avgval41=0
+avgval42=0
+avgval43=0
+avgval44=0
+avgval45=0
+
+avgval51=0
+avgval52=0
+avgval53=0
+avgval54=0
+avgval55=0
+if t = 100 then t = 0
+inc t
+
+	SELECTED_CREATURE =  PICK OBJECT(MOUSEX(),MOUSEY(),1, max_creatures)
+for count = 1 to max_creatures
+
+if t = 100 
+for a = 1 to 100
+position object wall_offset + a,animals(rnd(max_creatures)).position.x -(world_size)+rnd(world_size*2),0,animals(max_creatures).position.z -(world_size)+rnd(world_size*2)
+next 
+
+for a = 1 to max_trees - 1
+position object tree_offset + a,animals(rnd(max_creatures)).position.x -(world_size*1)+rnd(world_size*2),0,animals(max_creatures).position.z -(world_size*1)+rnd(world_size*2)
+next
+past_creatures6(count) = past_creatures5(count)
+past_creatures5(count) = past_creatures4(count)
+past_creatures4(count) = past_creatures3(count)
+past_creatures3(count) = past_creatures2(count)
+past_creatures2(count) = past_creatures1(count)
+past_creatures1(count) = animals(count).color 
+UPDATE MATRIX 1
+endif
+
+
+
+if OBJECT EXIST(count) = true 
+
+
+
+ink animals(count).color 
+x = screen width()
+line x-count,0,x-count,5
+ink past_creatures1(count)
+line x-count,5,x-count,10
+ink past_creatures2(count) 
+line x-count,10,x-count,15
+ink past_creatures3(count) 
+line x-count,15,x-count,20
+ink past_creatures4(count) 
+line x-count,20,x-count,25
+ink past_creatures5(count) 
+line x-count,25,x-count,30
+ink past_creatures6(count) 
+line x-count,30,x-count,35
+//======== SIGHT HANDLER ================================================================== 
+
+AVGAGE = AVGAGE + animals(count).AGE
+AVGFOV = AVGFOV + animals(count).fov
+AVGTURN = AVGTURN + animals(count).turn_speed
+AVGSIZE = AVGSIZE + animals(count).size
+AVGSIGHT = AVGSIGHT + animals(count).sight_dist 
+AVGSPEED = AVGSPEED + animals(count).speed
+AVGHEALTH = AVGHEALTH + animals(count).health
+
+avgval11 = avgval11 + animals(count).neuron.val1.w1 	
+avgval12 = avgval12 + animals(count).neuron.val1.w2 	
+avgval13 = avgval13 + animals(count).neuron.val1.w3
+avgval14 = avgval14 + animals(count).neuron.val1.w4 
+avgval15 = avgval15 + animals(count).neuron.val1.w5 
+
+avgval21 = avgval21 + animals(count).neuron.val2.w1 	
+avgval22 = avgval22 + animals(count).neuron.val2.w2 	
+avgval23 = avgval23 + animals(count).neuron.val2.w3 
+avgval24 = avgval24 + animals(count).neuron.val2.w4 
+avgval25 = avgval25 + animals(count).neuron.val2.w5
+
+avgval31 = avgval31 + animals(count).neuron.val3.w1 	
+avgval32 = avgval32 + animals(count).neuron.val3.w2 	
+avgval33 = avgval33 + animals(count).neuron.val3.w3 
+avgval34 = avgval34 + animals(count).neuron.val3.w4 
+avgval35 = avgval35 + animals(count).neuron.val3.w5 
+
+avgval41 = avgval41 + animals(count).neuron.val4.w1 	
+avgval42 = avgval42 + animals(count).neuron.val4.w2 	
+avgval43 = avgval43 + animals(count).neuron.val4.w3 
+avgval44 = avgval44 + animals(count).neuron.val4.w4 
+avgval45 = avgval45 + animals(count).neuron.val4.w5 
+
+avgval51 = avgval51 + animals(count).neuron.val5.w1 	
+avgval52 = avgval52 + animals(count).neuron.val5.w2 	
+avgval53 = avgval53 + animals(count).neuron.val5.w3 
+avgval54 = avgval54 + animals(count).neuron.val5.w4 
+avgval55 = avgval55 + animals(count).neuron.val5.w5 
+if Animals(count).age > longest_lived then longest_lived = Animals(count).age
+if Animals(count).speed > highest_speed then highest_speed = Animals(count).speed
+if Animals(count).health > highest_health then highest_health = Animals(count).health
+
+sight_handler(count,1)
+//MOVE OBJECT count,1
+//======== COLLISION HANDLER ==================================================================  
+
+          XPos#=Object Position X(count):
+          YPos#=Object Position Y(count):
+          ZPos#=Object Position Z(count)
+          ANIMALS(count).POSITION.X =  XPos#//Object Position X(count):
+          ANIMALS(count).POSITION.Y =  yPos#//Object Position Y(count):
+          ANIMALS(count).POSITION.Z =  zPos#//Object Position Z(count)
+
+
+//     OX# = OBJECT POSITION X(1)
+//     OY# = OBJECT POSITION Y(1)
+//     OZ# = OBJECT POSITION Z(1)
+//    
+//     
+//     `Store the player's new position on the xyz axis, after they've moved.
+//     X# = OBJECT POSITION X(1)
+//     Y# = OBJECT POSITION Y(1)
+//     Z# = OBJECT POSITION Z(1)
+// C = sc_SphereSlide(Obj,X1#,Y1#,Z1#,X2#,Y2#,Z2#,Radius#,0)
+//     IF C > 0
+//      
+//         cx# = sc_getCollisionSlideX()
+//         cy# = sc_getCollisionSlideY()
+//         cz# = sc_getCollisionSlideZ()
+//      
+//         POSITION OBJECT Dyn, cx#, cy#, cz#
+//              
+//     ENDIF
+//  
+
+          
+collision = Object Collision(count,0)
+collision_handler(count,collision)
+
+If Collision > 0
+Dec XPos#,Get Object Collision X()
+//Dec YPos#,Get Object Collision Y()
+Dec ZPos#,Get Object Collision Z()
+
+
+Position Object count,XPos#,YPos#,ZPos#
+if animals(count).kingdom = 0
+
+
+ collision_handler(count,collision)
+ 	
+//------------------------------ FEEDING -------------------------------------------------------------------------                 	
+	if collision > max_creatures and collision < wall_offset
+      		inc animals(count).Health,1000
+      		DELETE OBJECT collision
+ 			dec tree_population
+ 		    make_creature(0,-(world_size)+rnd(world_size*2),0,-(world_size)+rnd(world_size*2),1,0,0,0,0,0,0,0)
+	endif
+//------------------------------ WALL COLLISION  -------------------------------------------------------------------------                 	
+	   if collision > wall_offset  
+     	   dec animals(count).health,500
+     	   dec ANIMALS(count).fitness,100
+	   endif     	
+
+//------------------------------- FIGHTING	----------------------------------------------------------------------
+	if collision < max_creatures 
+		if  ANIMALS(count).sex = ANIMALS(collision).sex 
+		if  ANIMALS(count).age > maturity and ANIMALS(collision).age > maturity then dec ANIMALS(count).health,500:dec animals(count).health,500
+		dec ANIMALS(count).fitness,100
+		endif
+//------------------------------ MATING -------------------------------------------------------------------------                 	
+		if  ANIMALS(count).sex <> ANIMALS(collision).sex and ANIMALS(count).age > maturity and animals(count).health > max_health / 2
+     		trigger = rnd(1000); if trigger > 500 then breed(count,collision) // How often they breed If greater then 900 for instance its 10% of the time they contact each other they breed
+		inc ANIMALS(count).fitness,100 
+		endif  // END ANIMAL MATING LOOP
+	endif
+//---------------------------------------------------------------------------------------------------------------                 	
+endif // END OF MAIN COLLISION LOOP
+ 
+
+          endif    
+//======== END COLLISION HANDLER ==================================================================      
+//======== AGE HANDLER ==================================================================      
+inc animals(count).age
+if animals(count).age > max_age then dec animals(count).health,animals(count).age / 500
+
+//if animals(count).kingdom = 0
+	if animals(count).health < 0
+	    inc ANIMALS(count).fitness,animals(count).age 
+		dec population
+
+		DELETE OBJECT count
+		DELETE OBJECT count + eyeoffset
+	endif
+
+//======== END AGE HANDLER ==================================================================      
+endif // IF OBJECT EXIST LOOP
+skip2:  
+next
+
+     if keystate(46) = true then last_select = 0 // if the C button is hit the Stats are cleared from the screen
+     if keystate(25) = true then pause(x#,y#)    // If the P button is hit the game is paused
+     if keystate(13) = true then SYNC_RATE = SYNC_RATE + 1;SYNC RATE SYNC_RATE;print "Sync Rate:";SYNC_RATE
+      if keystate(12) = true then SYNC_RATE = SYNC_RATE - 1;SYNC RATE SYNC_RATE;print "Sync Rate:";SYNC_RATE
+ // if keystate(31) = true  then save()
+//        while keystate(21)  = false or keystate(49) = false
+//             if keystate(21) = true then save()
+//        endwhile 
+//   endif
+  
+//if keystate(38) = true then load()
+//         while keystate(21)  = false or keystate(49) = false
+//             if keystate(21) = true then load()
+//        endwhile 
+// endif
+
+     if population = 1
+         count = 1
+    while OBJECT EXIST(count) = false
+	     inc count
+	endwhile
+   
+     //SELECTIVE_BREEDING(count) 
+     endif
+     if population = 0
+     print "All creatures are dead, press any key to reload"
+     
+     INIT_creatures(-1)
+     endif
+camera_controls()
+ 	print "FPS :";SCREEN FPS();"  "
+loop//next
+endfunction
+function pause(x#,y#)
+wait 150
+while keystate(25) = false
+ 
+//for count = 1 to max_creatures
+// AVGSPEED = AVGSPEED + animals(count).speed
+//  AVGHEALTH = AVGHEALTH + animals(count).health
+//  AVGAGE = AVGAGE + animals(count).AGE
+//  AVGFOV = AVGFOV + animals(count).fov
+//  AVGSIGHT = AVGSIGHT + animals(count).sight_dist 
+// AVGTURN = AVGTURN + animals(count).turn_speed
+// 	print "Food :";animals(creature1).neuron.val1.w1;" :";animals(creature1).neuron.val1.w2;" :";animals(creature1).neuron.val1.w3;" :";animals(creature1).neuron.val1.w4;" :";animals(creature1).neuron.val1.w5  
+//     print "Mate :";animals(creature1).neuron.val2.w1;" :";animals(creature1).neuron.val2.w2;" :";animals(creature1).neuron.val2.w3;" :";animals(creature1).neuron.val2.w4;" :";animals(creature1).neuron.val2.w5  
+//     print "Enemy :";animals(creature1).neuron.val3.w1;" :";animals(creature1).neuron.val3.w2;" :";animals(creature1).neuron.val3.w3;" :";animals(creature1).neuron.val3.w4;" :";animals(creature1).neuron.val3.w5
+//     print "Default :";animals(creature1).neuron.val4.w1;" :";animals(creature1).neuron.val4.w2;" :";animals(creature1).neuron.val4.w3;" :";animals(creature1).neuron.val4.w4;" :";animals(creature1).neuron.val4.w5
+
+
+//next
+
+//print " Graphs:"
+print "Average Speed"
+print "Average Sight distance"
+print "Average FOV"
+Print "Average Turn Speed"
+
+
+
+	camera_controls()
+	print "Press P to unpause":
+endwhile 
+wait 150
+endfunction 
+//========================== CAMERA CONTROLS =======================================
+function Camera_controls()
+SELECTED_CREATURE =  PICK OBJECT(MOUSEX(),MOUSEY(),1, max_creatures)
+
+	
+		
+	mousex#=mousex#+(mousemovey()/5):
+	mousey#=mousey#+(mousemovex()/5):
+	//if mouseclick() = 1	
+control camera using arrowkeys 1,10,1
+	rotate camera 1,mousex#,mousey#,0
+//endif 
+IF camera position y(1) < (50+get ground height(1,camera position x(1),camera position z(1))) then position camera 1,camera position x(1),50+get ground height(1,camera position x(1),camera position z(1)),camera position z(1)
+
+
+//xpos = yangle
+
+	POSITION OBJECT finder,CAMERA POSITION X(1),CAMERA POSITION Y(1),newzvalue(CAMERA POSITION Z(1),CAMERA ANGLE y(1),10)
+
+	POINT OBJECT finder,animals(2).position.x,animals(2).position.y,animals(2).position.z
+	
+	set cursor 0,0
+	
+	if mouseclick() = 1 and selected_creature > 0 
+	//if last_select > 0 and object exist (last_select) =then hide OBJECT last_select + eyeoffset
+		last_select = selected_creature
+	endif    	
+	
+	
+	sight = last_select + eyeoffset
+	if last_select > 0 and OBJECT EXIST (sight) = 1
+	if keystate(50) = true then mutate(last_select)
+	SHOW OBJECT sight	
+	set OBJECT COLLISION on sight:set OBJECT COLLISION off Last_select
+	sees = object collision(sight,0)
+	ink rgb(100,100,200)
+	Print "Creature Sees:";
+	print sees
+	if sees <> 0 
+	if sees > tree_offset then print "Food"
+	if sees > wall_offset then print "Wall"
+		if sees =<max_creatures
+		if animals(sees).sex <> animals(last_select).sex then print "Mate"
+		if animals(sees).sex = animals(last_select).sex then print "Enemy"
+		endif
+	endif
+	if sees = 0 then print "Nothing"
+	
+	set OBJECT COLLISION off sight: SET OBJECT COLLISION ON Last_select 
+
+
+
+        print_stats(last_select)
+		if object exist (last_select )
+			x=OBJECT POSITION X (last_select)
+			y=OBJECT POSITION y (last_select)
+			z=OBJECT POSITION z (last_select)
+			yrotate object sight, object angle y(last_select)
+			position object sight,x,y,z
+			POSITION CAMERA x,y,z 
+		endif 
+	endif
+	sync
+    if spacekey() = true then exitfunction
+
+endfunction
+function print_weight(weight)
+if weight > 0 
+ ink RGB(0,255,0),0
+else
+ ink RGB(255,0,0),0
+endif
+
+endfunction weight
+function save()
+DELETE FILE "Creatures.dat"
+MAKE FILE "Creatures.dat"
+OPEN TO WRITE 1,"Creatures.dat"
+
+ Creature as creature
+Write word 1,avgval11
+Write word 1,avgval12
+Write word 1,avgval13
+Write word 1,avgval14
+Write word 1,avgval15
+
+Write word 1,avgval21
+Write word 1,avgval22
+Write word 1,avgval23
+Write word 1,avgval24
+Write word 1,avgval25
+
+Write word 1,avgval31
+Write word 1,avgval32
+Write word 1,avgval33
+Write word 1,avgval34
+Write word 1,avgval35
+
+Write word 1,avgval41
+Write word 1,avgval42
+Write word 1,avgval43
+Write word 1,avgval44
+Write word 1,avgval45
+
+Write word 1,avgval51
+Write word 1,avgval52
+Write word 1,avgval53
+Write word 1,avgval54
+Write word 1,avgval55
+   
+  close file 1  
+    
+
+endfunction
+function load()
+OPEN TO READ 1,"Creatures.dat"
+
+read word 1,avgval11
+read word 1,avgval12
+read word 1,avgval13
+read word 1,avgval14
+read word 1,avgval15
+
+read word 1,avgval21
+read word 1,avgval22
+read word 1,avgval23
+read word 1,avgval24
+read word 1,avgval25
+
+read word 1,avgval31
+read word 1,avgval32
+read word 1,avgval33
+read word 1,avgval34
+read word 1,avgval35
+
+read word 1,avgval41
+read word 1,avgval42
+read word 1,avgval43
+read word 1,avgval44
+read word 1,avgval45
+
+read word 1,avgval51
+read word 1,avgval52
+read word 1,avgval53
+read word 1,avgval54
+read word 1,avgval55
+
+for count = 1 to max_creatures
+animals(count).neuron.val1.w1 = avgval11
+animals(count).neuron.val1.w2 = avgval12
+animals(count).neuron.val1.w3 = avgval13
+animals(count).neuron.val1.w4 = avgval14
+animals(count).neuron.val1.w5 = avgval15
+
+animals(count).neuron.val2.w1 = avgval21
+animals(count).neuron.val2.w2 = avgval22
+animals(count).neuron.val2.w3 = avgval23
+animals(count).neuron.val2.w4 = avgval24
+animals(count).neuron.val2.w5 = avgval25
+
+animals(count).neuron.val3.w1 = avgval31
+animals(count).neuron.val3.w2 = avgval32
+animals(count).neuron.val3.w3 = avgval33
+animals(count).neuron.val3.w4 = avgval34
+animals(count).neuron.val3.w5 = avgval35
+
+animals(count).neuron.val4.w1 = avgval41
+animals(count).neuron.val4.w2 = avgval42
+animals(count).neuron.val4.w3 = avgval43
+animals(count).neuron.val4.w4 = avgval44
+animals(count).neuron.val4.w5 = avgval45
+
+animals(count).neuron.val5.w1 = avgval51
+animals(count).neuron.val5.w2 = avgval52
+animals(count).neuron.val5.w3 = avgval53
+animals(count).neuron.val5.w4 = avgval54
+animals(count).neuron.val5.w5 = avgval55
+next
+CLOSE FILE 1
+endfunction
+
+
+function make_maze()
+for a = 1 to 100
+ MAKE OBJECT cube wall_offset + a,50 
+ SET object COLLISION to boxes wall_offset + a
+//SHOW OBJECT BOUNDS 
+SET OBJECT collision to boxes wall_offset + a
+position object wall_offset + a,-(world_size*5)+rnd(world_size*10),0,-(world_size*5)+rnd(world_size*10) 
+next 
+
+endfunction
+
+FUNCTION collision_handler(count,hit)
+ret = 0
+
+
+//in = OBJECT COLLISION (count,0)
+//if count = 0 then in = 0  // sees nothing
+if hit <>0 
+	if hit > tree_offset then in = 1           // food
+    if hit > wall_offset then in = 4  
+    if hit < tree_offset 
+	if animals(hit).sex <> animals(count).sex	then in = 2 // mate
+	if animals(hit).sex = animals(count).sex then  in = 3  // enemy
+	endif
+endif       
+
+
+   select hit
+      case  0:    // Sees nothing
+
+     		trigger = rnd(10000);if animals(count).neuron.val5.w1*animals(count).neuron.val5.w5 > trigger
+     	    	MOVE OBJECT count, animals(count).speed
+     	    	ret=1
+     		animals(count).distance_moved =  animals(count).distance_moved +animals(count).speed:endif
+	
+	         trigger = rnd(10000);if animals(count).neuron.val5.w2*animals(count).neuron.val5.w5 > trigger
+     	     	MOVE OBJECT count,-animals(count).speed
+     	     	ret=2
+     		animals(count).distance_moved =  animals(count).distance_moved +animals(count).speed:endif
+     		
+	
+     		trigger = rnd(10000);if animals(count).neuron.val5.w3*animals(count).neuron.val5.w5 > trigger
+     		yROTATE OBJECT count, OBJECT ANGLE Y(count)-animals(count).turn_speed:ret=3;endif
+     		
+     		trigger = rnd(10000);if animals(count).neuron.val5.w4*animals(count).neuron.val5.w5 > trigger
+     		yROTATE OBJECT count, OBJECT ANGLE Y(count)+ animals(count).turn_speed:ret=4:endif
+     		//trigger = rnd(100);if animals(count).neuron.val4.w5 > trigger:endif   
+     		//yROTATE OBJECT count, OBJECT ANGLE Y(count)+ (-15 + rnd(30))- //.1   
+      endcase
+      
+           case  1:    // food
+
+     		trigger = rnd(10000);if animals(count).neuron.val6.w1*animals(count).neuron.val6.w5 > trigger
+     	    	MOVE OBJECT count, animals(count).speed
+     	    	ret=1
+     		animals(count).distance_moved =  animals(count).distance_moved +animals(count).speed:endif
+	
+	         trigger = rnd(10000);if animals(count).neuron.val6.w2*animals(count).neuron.val6.w5 > trigger
+     	     	MOVE OBJECT count,-animals(count).speed
+     	     	ret=2
+     		animals(count).distance_moved =  animals(count).distance_moved +animals(count).speed:endif
+     		
+	
+     		trigger = rnd(10000);if animals(count).neuron.val6.w3*animals(count).neuron.val6.w5 > trigger
+     		yROTATE OBJECT count, OBJECT ANGLE Y(count)-animals(count).turn_speed:ret=3;endif
+     		
+     		trigger = rnd(10000);if animals(count).neuron.val6.w4*animals(count).neuron.val6.w5 > trigger
+     		yROTATE OBJECT count, OBJECT ANGLE Y(count)+ animals(count).turn_speed:ret=4:endif
+     		//trigger = rnd(100);if animals(count).neuron.val6.w5 > trigger:endif   
+     		//yROTATE OBJECT count, OBJECT ANGLE Y(count)+ (-15 + rnd(30))- //.1   
+      endcase 
+      
+      
+            case  2:    // mate
+
+     		trigger = rnd(10000);if animals(count).neuron.val7.w1*animals(count).neuron.val7.w5 > trigger
+     	    	MOVE OBJECT count, animals(count).speed
+     	    	ret=1
+     		animals(count).distance_moved =  animals(count).distance_moved +animals(count).speed:endif
+	
+	         trigger = rnd(10000);if animals(count).neuron.val7.w2*animals(count).neuron.val7.w5 > trigger
+     	     	MOVE OBJECT count,-animals(count).speed
+     	     	ret=2
+     		animals(count).distance_moved =  animals(count).distance_moved +animals(count).speed:endif
+     		
+	
+     		trigger = rnd(10000);if animals(count).neuron.val7.w3 *animals(count).neuron.val7.w5> trigger
+     		yROTATE OBJECT count, OBJECT ANGLE Y(count)-animals(count).turn_speed:ret=3;endif
+     		
+     		trigger = rnd(10000);if animals(count).neuron.val7.w4 *animals(count).neuron.val7.w5> trigger
+     		yROTATE OBJECT count, OBJECT ANGLE Y(count)+ animals(count).turn_speed:ret=4:endif
+     		//trigger = rnd(100);if animals(count).neuron.val7.w5 > trigger:endif   
+     		//yROTATE OBJECT count, OBJECT ANGLE Y(count)+ (-15 + rnd(30))- //.1   
+      endcase
+      
+            case  3:    // Sees nothing
+
+     		trigger = rnd(10000);if animals(count).neuron.val8.w1*animals(count).neuron.val8.w5 > trigger
+     	    	MOVE OBJECT count, animals(count).speed
+     	    	ret=1
+     		animals(count).distance_moved =  animals(count).distance_moved +animals(count).speed:endif
+	
+	         trigger = rnd(10000);if animals(count).neuron.val8.w2*animals(count).neuron.val8.w5  > trigger
+     	     	MOVE OBJECT count,-animals(count).speed
+     	     	ret=2
+     		animals(count).distance_moved =  animals(count).distance_moved +animals(count).speed:endif
+     		
+	
+     		trigger = rnd(10000);if animals(count).neuron.val8.w3*animals(count).neuron.val8.w5  > trigger
+     		yROTATE OBJECT count, OBJECT ANGLE Y(count)-animals(count).turn_speed:ret=3;endif
+     		
+     		trigger = rnd(10000);if animals(count).neuron.val8.w4*animals(count).neuron.val8.w5  > trigger
+     		yROTATE OBJECT count, OBJECT ANGLE Y(count)+ animals(count).turn_speed:ret=4:endif
+     		//trigger = rnd(100);if animals(count).neuron.val8.w5 > trigger:endif   
+     		//yROTATE OBJECT count, OBJECT ANGLE Y(count)+ (-15 + rnd(30))- //.1   
+      endcase
+      
+            case  4:    // wall
+
+     		trigger = rnd(10000);if animals(count).neuron.val9.w1*animals(count).neuron.val9.w5  > trigger
+     	    	MOVE OBJECT count, animals(count).speed
+     	    	ret=1
+     		animals(count).distance_moved =  animals(count).distance_moved +animals(count).speed:endif
+	
+	         trigger = rnd(10000);if animals(count).neuron.val9.w2*animals(count).neuron.val9.w5  > trigger
+     	     	MOVE OBJECT count,-animals(count).speed
+     	     	ret=2
+     		animals(count).distance_moved =  animals(count).distance_moved +animals(count).speed:endif
+     		
+	
+     		trigger = rnd(10000);if animals(count).neuron.val9.w3*animals(count).neuron.val9.w5  > trigger
+     		yROTATE OBJECT count, OBJECT ANGLE Y(count)-animals(count).turn_speed:ret=3;endif
+     		
+     		trigger = rnd(10000);if animals(count).neuron.val9.w4*animals(count).neuron.val9.w5  > trigger
+     		yROTATE OBJECT count, OBJECT ANGLE Y(count)+ animals(count).turn_speed:ret=4:endif
+     		//trigger = rnd(100);if animals(count).neuron.val9.w5 > trigger:endif   
+     		//yROTATE OBJECT count, OBJECT ANGLE Y(count)+ (-15 + rnd(30))- //.1   
+      endcase
+    endselect
+endfunction ret
+
+
+function Mutate(creature1 as integer)
+count = creature1
+ 	 
+ 
+ 
+ 
+ 	animals(count).speed =RND(20)
+ 	animals(count).COLOR = rgb(rnd(255),rnd(255),rnd(255))
+ 	animals(count).fov = rnd(90)
+ 	animals(count).sight_dist =rnd(150)
+ 	animals(count).turn_speed =rnd(50)
+ 	animals(count).size = rnd(30)
+COLOR OBJECT count,animals(count).COLOR
+    animals(count).neuron.val1.w1= rnd(10000)+ 1
+		animals(count).neuron.val1.w2= rnd(10000)+ 1
+		animals(count).neuron.val1.w3= rnd(10000)+ 1
+		animals(count).neuron.val1.w4= rnd(10000)+ 1
+		animals(count).neuron.val1.w5= rnd(10000)+ 1
+		
+    	animals(count).neuron.val2.w1= rnd(10000)+ 1
+    	animals(count).neuron.val2.w2= rnd(10000)+ 1
+    	animals(count).neuron.val2.w3= rnd(10000)+ 1
+    	animals(count).neuron.val2.w4= rnd(10000)+ 1
+    	animals(count).neuron.val2.w5= rnd(10000)+ 1
+    	
+    	animals(count).neuron.val3.w1= rnd(10000)+ 1
+    	animals(count).neuron.val3.w2= rnd(10000)+ 1
+    	animals(count).neuron.val3.w3= rnd(10000)+ 1
+    	animals(count).neuron.val3.w4= rnd(10000)+ 1
+    	animals(count).neuron.val3.w5= rnd(10000)+ 1
+    	
+    	animals(count).neuron.val4.w1= rnd(10000)+ 1
+    	animals(count).neuron.val4.w2= rnd(10000)+ 1
+    	animals(count).neuron.val4.w3= rnd(10000)+ 1
+    	animals(count).neuron.val4.w4= rnd(10000)+ 1
+    	animals(count).neuron.val4.w5= rnd(10000)+ 1
+    	
+    	animals(count).neuron.val5.w1= rnd(10000)+ 1
+    	animals(count).neuron.val5.w2= rnd(10000)+ 1
+    	animals(count).neuron.val5.w3= rnd(10000)+ 1
+    	animals(count).neuron.val5.w4= rnd(10000)+ 1
+    	animals(count).neuron.val5.w5= rnd(10000)+ 1
+    	
+    	    	animals(count).neuron.val6.w1= rnd(10000)+ 1
+    	animals(count).neuron.val6.w2= rnd(10000)+ 1
+    	animals(count).neuron.val6.w3= rnd(10000)+ 1
+    	animals(count).neuron.val6.w4= rnd(10000)+ 1
+    	animals(count).neuron.val6.w5= rnd(10000)+ 1
+    	
+    	    	animals(count).neuron.val7.w1= rnd(10000)+ 1
+    	animals(count).neuron.val7.w2= rnd(10000)+ 1
+    	animals(count).neuron.val7.w3= rnd(10000)+ 1
+    	animals(count).neuron.val7.w4= rnd(10000)+ 1
+    	animals(count).neuron.val7.w5= rnd(10000)+ 1
+    	
+    	    	animals(count).neuron.val8.w1= rnd(10000)+ 1
+    	animals(count).neuron.val8.w2= rnd(10000)+ 1
+    	animals(count).neuron.val8.w3= rnd(10000)+ 1
+    	animals(count).neuron.val8.w4= rnd(10000)+ 1
+    	animals(count).neuron.val8.w5= rnd(10000)+ 1
+    	
+    	    	animals(count).neuron.val9.w1= rnd(10000)+ 1
+    	animals(count).neuron.val9.w2= rnd(10000)+ 1
+    	animals(count).neuron.val9.w3= rnd(10000)+ 1
+    	animals(count).neuron.val9.w4= rnd(10000)+ 1
+    	animals(count).neuron.val9.w5= rnd(10000)+ 1
+endfunction
+
+
+function DRAW_NETWORK()
+
+endfunction
+
+
+
+function sig#(x# as float)
+return# = 1 / (1-exp(-x))
+endfunction
+
+
+function initialize()
+sync on: //SYNC RATE 60
+set display mode 800,600,32
+SET TEXT FONT "verdana"
+SET TEXT SIZE 12
+	inputs.val1.w1 = 2000
+	inputs.val1.w2 = 2000
+	inputs.val1.w3 = 2000
+	inputs.val1.w4 = 2000
+	inputs.val1.w5 = 2000
+	
+	inputs.val2.w1 = 2000
+	inputs.val2.w2 = 2000
+	inputs.val2.w3 = 2000
+	inputs.val2.w4 = 2000
+	inputs.val2.w5 = 2000
+	
+	inputs.val3.w1 = 2000
+	inputs.val3.w2 = 2000
+	inputs.val3.w3 = 2000
+	inputs.val3.w4 = 2000
+	inputs.val3.w5 = 2000
+
+	inputs.val4.w1 = 2000
+	inputs.val4.w2 = 2000
+	inputs.val4.w3 = 2000
+	inputs.val4.w4 = 2000
+	inputs.val4.w5 = 2000
+	
+	
+	inputs.val5.w1 = 2000
+	inputs.val5.w2 = 2000
+	inputs.val5.w3 = 2000
+	inputs.val5.w4 = 2000
+	inputs.val5.w5 = 2000
+	MAKE OBJECT cone finder,1
+		POSITION OBJECT finder,0,0,0
+		SET OBJECT CULL finder,0
+	XROTATE OBJECT finder,90
+	FIX OBJECT PIVOT finder
+	
+	//HIDE OBJECT 10000
+MAKE OBJECT sphere 1,10;MAKE OBJECT cone 2,10;MAKE OBJECT sphere 3,10;MAKE OBJECT cube 4,10
+MAKE OBJECT sphere cplayer,10
+MAKE OBJECT TRIANGLE csight,0,0,0,-30,0,100,30,0,100
+ 
+POSITION OBJECT 1,0,0,0;POSITION OBJECT 2,0,0,100;POSITION OBJECT 3,100,0,0;POSITION OBJECT 4,100,0,100
+POSITION OBJECT cplayer ,50,0,50
+ 
+POSITION OBJECT csight,object position x(cplayer),object position y(cplayer),object position z(cplayer)
+rotate object csight, OBJECT ANGLE X (cplayer),OBJECT ANGLE y (cplayer),OBJECT ANGLE z (cplayer)
+ 
+MAKE CAMERA 1
+POSITION CAMERA 1,0,200,50
+POINT CAMERA 1,50,0,50
+ COLOR BACKDROP 1,0
+SET OBJECT collision to polygons csight 
+
+ for a = 1 to 4
+ 	creatures(a).position.x = OBJECT POSITION X (a)
+ 	creatures(a).position.y = OBJECT POSITION y (a)
+ 	creatures(a).position.z = OBJECT POSITION z (a)
+ next
+ 
+  creatures(1).kingdom = cfood
+  creatures(2).kingdom = cmate
+  creatures(3).kingdom = cenemy
+  creatures(4).kingdom = cwall
+
+endfunction
