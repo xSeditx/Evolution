@@ -1,0 +1,429 @@
+SYNC ON:GLOBAL SCREENX = 1024: GLOBAL SCREENY =800:SET DISPLAY MODE SCREENX,SCREENY,32
+Rem Project: ALife
+Rem Created: Monday, November 20, 2017
+Rem ***** Main Source File *****
+
+
+COLOR BACKDROP RGB(255,255,255)
+SET WINDOW POSITION 0,0
+
+Global hit
+#constant MAX_AGE  1000
+#constant MAX_HEALTH 1000
+#constant MAX_CREATURES 2000
+
+#constant WORLD_WIDTH SCREENX - 100
+#constant WORLD_HEIGHT SCREENY - 100
+#constant LEFT_BOUNDS  100
+#constant TOP_BOUNDS  100
+
+#constant MALE  0
+#constant FEMALE 1
+#constant _PI 3.14159
+#constant NUM_NEURONS 2
+#constant NUM_RESPONSES 4
+
+#constant NORTHING 0
+#constant ENEMY 1
+#constant MATE 2
+
+
+TYPE LIFE
+	X AS float
+	Y AS float
+	HEALTH AS INTEGER
+	ANGLE AS float
+	COLOR AS INTEGER
+	HANDLE AS INTEGER
+	AGE AS INTEGER
+	LAST_BREED as integer
+	EXIST as integer
+	SEX AS INTEGER
+ENDTYPE
+
+GLOBAL FPS
+GLOBAL NUM_CREATURES
+GLOBAL HANDLES
+GLOBAL DEATHS
+GLOBAL BIRTHS
+GLOBAL MAIN_LOOP_SPEED
+GLOBAL NUM_OF_COLLISIONS
+
+DIM BRAINS(MAX_CREATURES,NUM_NEURONS,NUM_RESPONSES)
+//STRUCT{MAXCREATURES->BRAINSEES->ACTION}
+//BRAINSEES-NOTHING-
+//            ENEMY-
+//             MATE-NOTHING
+//                 -LEFT
+//                 -RIGHT
+//                 -FORWARD   
+//                 -BACKWARDS    
+
+DIM WORLD(SCREENX+1,SCREENY+1) AS float
+DIM CREATURES(MAX_CREATURES+1) AS LIFE
+DIM COLLISIONS(8)
+
+
+DIM _COS(360) AS FLOAT
+DIM _SIN(360) AS FLOAT
+
+//=========INITIALIZE STARTING CREATURES  
+
+FOR ANGLE# = 0 TO 360 STEP 1.0
+ANGLE = ANGLE#
+ _COS(ANGLE) = COS(ANGLE#)
+ _SIN(ANGLE) = SIN(ANGLE#)
+NEXT ANGLE#
+
+
+for x= 0 to screenx
+for y = 0 to screeny 
+world(x,y) = 0
+next
+next
+
+
+FOR COUNT = 0 TO MAX_CREATURES / 2
+	CREATURES(COUNT).X =(rnd(WORLD_WIDTH))
+	CREATURES(COUNT).Y =(rnd(WORLD_HEIGHT))
+	CREATURES(COUNT).COLOR = RGB(RND(255),RND(255),RND(255))
+	CREATURES(COUNT).HANDLE =count
+	CREATURES(COUNT).age = rnd(Max_age)
+	CREATURES(COUNT).exist = 1
+	CREATURES(COUNT).ANGLE = RND(360)
+	CREATURES(COUNT).SEX = RND(1)
+	CREATURES(COUNT).HEALTH = RND(MAX_HEALTH)
+	INC NUM_CREATURES
+	DOT CREATURES(COUNT).X, CREATURES(COUNT).Y 
+	
+	FOR SEES_OBJECT = 0 TO NUM_NEURONS
+		FOR RESPONSE = 0 TO NUM_RESPONSES
+		     BRAINS(COUNT,SEES_OBJECT,RESPONSE) = RND(10000)
+		NEXT
+	NEXT
+	
+NEXT
+
+
+//=====================================================================================================================
+//                            MAIN GAME LOOP                                                                                
+//                            DATE:  11/22/17                                                                                
+//                            DEPENDANCIES: NONE                                                                                
+//=====================================================================================================================
+	
+WHILE KEYSTATE(1) = 0
+ 	MAIN_LOOP_SPEED = TIMER()
+	INC DAYS
+	
+	_MOVE_CREATURES() 
+//=======================DISPLAY DEBGUG INFO======================
+	SET CURSOR 0,0
+ 	PRINT "FPS: ";SCREEN FPS();"  ";"SPEED: ";TIMER() - MAIN_LOOP_SPEED;"m/s"; "   DAYS(cycles): ";days
+	PRINT "NUMBER OF CREATURES: "; NUM_CREATURES
+	PRINT "DEATHS: ";DEATHS;"   BIRTHS: ";BIRTHS
+	print 
+ 	PRINT 
+    PRINT "____________________"
+	PRINT "X:";_INT(CREATURES(1).X );"  Y:";_INT(CREATURES(1).Y); "  ANGLE:"; CREATURES(1).ANGLE 
+	PRINT CREATURES(1).age 
+	PRINT CREATURES(1).HEALTH 
+    PRINT NUM_OF_COLLISIONS
+	PRINT "___ODDS of CREATURE PERFORMING ACTION ____"
+	print "0: ";
+	PRINT BRAINS(1,0,1);" "; 
+    PRINT BRAINS(1,0,2);" ";  
+	PRINT BRAINS(1,0,3);" ";  
+	PRINT BRAINS(1,0,4) 
+	print "1: ";	
+	PRINT BRAINS(1,1,1);" ";  
+    PRINT BRAINS(1,1,2);" ";  
+	PRINT BRAINS(1,1,3);" ";  
+	PRINT BRAINS(1,1,4) 
+	print "2: ";
+	PRINT BRAINS(1,2,1);" ";  
+    PRINT BRAINS(1,2,2);" ";  
+	PRINT BRAINS(1,2,3);" ";  
+	PRINT BRAINS(1,2,4) 
+	PRINT  _SIGHT(1,10)				
+IF UPKEY() = 1 THEN INC  FPS;SYNC RATE FPS
+IF DOWNKEY() = 1 THEN  DEC  FPS;SYNC RATE FPS
+//========================================================
+SYNC
+CLS
+ENDWHILE
+END //========== TERMINATE PROGRAM
+
+
+FUNCTION _MOVE_CREATURES()
+LOCK PIXELS
+	FOR COUNT = 0 TO MAX_CREATURES
+	NUM_OF_COLLISIONS=0
+		IF CREATURES(COUNT).exist = 1
+			
+			INC CREATURES(COUNT).AGE
+			INC CREATURES(COUNT).LAST_BREED	
+			
+			OLDX = CREATURES(COUNT).X:OLDY = CREATURES(COUNT).Y
+		       X = CREATURES(COUNT).X:   Y = CREATURES(COUNT).Y 
+//-----------Check Bounds and Wrap Creatures----------------------------------------------------------------
+			
+			SEES = _SIGHT(COUNT, 10) 
+			IF SEES <> 0 
+			
+				IF CREATURES(SEES).SEX = CREATURES(COUNT).SEX
+                        _SIGHT_HANDLER(COUNT,ENEMY)
+				ENDIF
+				
+				IF CREATURES(SEES).SEX <> CREATURES(COUNT).SEX
+				        _SIGHT_HANDLER(COUNT,MATE)
+				ENDIF
+			ENDIF
+			
+			IF 	SEES = 0 THEN  _SIGHT_HANDLER(COUNT,0)
+			 X = CREATURES(COUNT).X:   Y = CREATURES(COUNT).Y 
+			 WORLD(X ,Y) = COUNT
+//================= CHECK COLLISIONS =============================================================================
+	
+		    HIT =  _OBJECT_HIT(COUNT)
+ 			IF HIT <> 0
+ //================= BREED ===================================================================================
+             	IF CREATURES(HIT).SEX <> CREATURES(COUNT).SEX
+ 			    	IF CREATURES(COUNT).LAST_BREED > 1 THEN CREATURES(COUNT).LAST_BREED = 0: _BREED(COUNT,HIT)
+ 			 	ENDIF
+ //================= FIGHT ==================================================================================
+		     	IF CREATURES(HIT).SEX = CREATURES(COUNT).SEX
+ 			    	DEC CREATURES(COUNT).HEALTH,500
+ 			 	ENDIF
+ 			    X = OLDX:Y = OLDY
+	    	    WORLD(X ,Y) = COUNT
+           ELSE
+           WORLD(X,Y) = COUNT
+           ENDIF 
+//================= DEATH =====================================================================================
+           
+            IF CREATURES(COUNT).AGE > MAX_AGE THEN DEC CREATURES(COUNT).HEALTH,10
+            
+            IF CREATURES(COUNT).HEALTH < 0 
+                 _KILL_CREATURE(COUNT)
+			ENDIF
+//----------------- Draw Creature----------------------------------------------------------------------------
+
+			IF CREATURES(COUNT).EXIST <> 0 
+			    DOT CREATURES(COUNT).X,CREATURES(COUNT).Y, CREATURES(COUNT).color
+			    //CIRCLE CREATURES(COUNT).X,CREATURES(COUNT).Y,5
+		    ENDIF  
+		    
+		ENDIF//<-- IF CREATURE EXIST CHECK
+		_SET_PLAYER_POSITION(COUNT)
+	NEXT //<--MAIN CREATURE LOOP
+	UNLOCK PIXELS
+ENDFUNCTION
+
+function _MOVE_OBJECT(OBJ AS INTEGER,SPEED AS float )
+	CREATURES(OBJ).X = _WRAPX(CREATURES(OBJ).X + SPEED * COS(CREATURES(OBJ).ANGLE))
+	CREATURES(OBJ).Y = _WRAPY(CREATURES(OBJ).y + SPEED * SIN(CREATURES(OBJ).ANGLE)) 
+endfunction
+
+
+FUNCTION _BREED(creature1,creature2)
+
+	if NUM_CREATURES => MAX_CREATURES then exitfunction
+	
+	INC NUM_CREATURES
+	inc BIRTHS
+
+	count = 1
+	while creatures(count).exist = 1
+	     inc count
+	endwhile
+
+	CREATURES(count).X = _WRAPX(CREATURES(creature1).X  + RND(2) - 1)  
+	CREATURES(count).Y = _WRAPY(CREATURES(creature1).Y  + RND(2) - 1)  
+
+	
+	IF CREATURES(COUNT).X <= 0 THEN CREATURES(COUNT).X = WORLD_WIDTH
+    IF CREATURES(COUNT).X => WORLD_WIDTH THEN CREATURES(COUNT).X = 0
+    IF CREATURES(COUNT).Y <= 0 THEN CREATURES(COUNT).Y = WORLD_WIDTH
+    IF CREATURES(COUNT).Y => WORLD_WIDTH THEN CREATURES(COUNT).Y = 0
+	
+	CREATURES(count).AGE  = 0
+	CREATURES(count).COLOR = CREATURES(creature1).color
+	CREATURES(count).HANDLE = count
+	CREATURES(count).SEX = RND(1)
+	CREATURES(count).HEALTH = 1000
+	CREATURES(count).ANGLE = RND(355)
+     X = CREATURES(COUNT).X
+     Y = CREATURES(COUNT).Y
+ 	
+ 	FOR SEES_OBJECT = 0 TO NUM_NEURONS
+		FOR RESPONSE = 0 TO NUM_RESPONSES
+		     BRAINS(COUNT,SEES_OBJECT,RESPONSE) = BRAINS(CREATURE1,SEES_OBJECT,RESPONSE) + (RND(100)-50)
+		NEXT
+	NEXT
+ 	
+ 	
+ 	  	
+	CREATURES(COUNT).exist = 1
+ENDFUNCTION
+
+FUNCTION _KILL_CREATURE(OBJ)
+	CREATURES(OBJ).AGE  = 0
+	CREATURES(OBJ).COLOR = 0
+	CREATURES(OBJ).HANDLE = 0
+	CREATURES(OBJ).SEX = 0
+	CREATURES(OBJ).HEALTH = 0
+	CREATURES(OBJ).EXIST = 0
+	 	
+ 	FOR SEES_OBJECT = 0 TO NUM_NEURONS
+		FOR RESPONSE = 0 TO NUM_RESPONSES
+		     BRAINS(OBJ,SEES_OBJECT,RESPONSE) = 0
+		NEXT
+	NEXT
+	DEC NUM_CREATURES
+	INC DEATHS
+ENDFUNCTION
+
+
+function _OBJECT_HIT(OBJ AS INTEGER)
+RET = 0
+X = CREATURES(OBJ).X
+Y = CREATURES(OBJ).Y
+
+CHECK = _CHECK_SPACE(X,Y+1):IF CHECK <> 0 THEN RET = CHECK:INC NUM_OF_COLLISIONS
+CHECK = _CHECK_SPACE(X-1,Y):IF CHECK <> 0 THEN RET = CHECK:INC NUM_OF_COLLISIONS   
+CHECK = _CHECK_SPACE(X-1,Y+1):IF CHECK <> 0 THEN RET = CHECK:INC NUM_OF_COLLISIONS   
+CHECK = _CHECK_SPACE(X-1,Y-1):IF CHECK <> 0 THEN RET = CHECK:INC NUM_OF_COLLISIONS   
+
+CHECK = _CHECK_SPACE(X+1,Y):IF CHECK <> 0 THEN RET = CHECK:INC NUM_OF_COLLISIONS   
+CHECK = _CHECK_SPACE(X+1,Y+1):IF CHECK <> 0 THEN RET = CHECK :INC NUM_OF_COLLISIONS    
+CHECK = _CHECK_SPACE(X+1,Y-1):IF CHECK <> 0 THEN RET = CHECK:INC NUM_OF_COLLISIONS       
+CHECK = _CHECK_SPACE(X,Y-1):IF CHECK <> 0 THEN RET = CHECK :INC NUM_OF_COLLISIONS  
+
+endfunction RET
+
+
+function _ROTATE_OBJECT(OBJ AS INTEGER,ANGLE AS FLOAT)
+	    CREATURES(OBJ).ANGLE = WRAPVALUE(CREATURES(OBJ).ANGLE + ANGLE)
+endfunction
+
+
+function _SIGHT(OBJ AS INTEGER, SIGHT_DIST AS FLOAT)
+	X# = CREATURES(OBJ).X: Y# = CREATURES(OBJ).Y
+	ANGLE = WRAPVALUE(CREATURES(OBJ).ANGLE)
+	
+	x1 = 0:y1 = 0
+	FOV = 30
+	for A  = -Fov TO FOV	
+    	FOR DIST = 2 TO SIGHT_DIST 
+			XX# = X# + DIST * _COS(_INT(WRAPVALUE(ANGLE + A)))
+			YY# = Y# + DIST * _SIN(_INT(WRAPVALUE(ANGLE + A)))
+			X1 = _WRAPX(XX#)
+			Y1 = _WRAPY(YY#)
+			//DOT XX#,YY#,RGB(255,255,255) 
+			VALUE = WORLD(X1,Y1)
+			IF WORLD(X1,Y1) <> 0 THEN EXITFUNCTION VALUE
+		NEXT
+	NEXT
+		
+ret = 0
+endfunction ret
+
+function _SIGHT_HANDLER(OBJ AS INTEGER, SIGHT AS INTEGER)
+TURN_SPEED = 5 
+	SELECT SIGHT
+		CASE 0:
+			TRIGGER = RND(10000):IF BRAINS(OBJ,0,1) > TRIGGER THEN _ROTATE_OBJECT(OBJ,-TURN_SPEED)
+			TRIGGER = RND(10000):IF BRAINS(OBJ,0,2) > TRIGGER THEN _ROTATE_OBJECT(OBJ,TURN_SPEED)
+			TRIGGER = RND(10000):IF BRAINS(OBJ,0,3) > TRIGGER THEN _MOVE_OBJECT(OBJ,1)
+			TRIGGER = RND(10000):IF BRAINS(OBJ,0,4) > TRIGGER THEN _MOVE_OBJECT(OBJ,-1)	
+		ENDCASE		
+		CASE 1:
+			TRIGGER = RND(10000):IF BRAINS(OBJ,1,1) > TRIGGER THEN _ROTATE_OBJECT(OBJ, -TURN_SPEED)
+			TRIGGER = RND(10000):IF BRAINS(OBJ,1,2) > TRIGGER THEN _ROTATE_OBJECT(OBJ,TURN_SPEED)
+			TRIGGER = RND(10000):IF BRAINS(OBJ,1,3) > TRIGGER THEN _MOVE_OBJECT(OBJ,1)
+			TRIGGER = RND(10000):IF BRAINS(OBJ,1,4) > TRIGGER THEN _MOVE_OBJECT(OBJ,-1)	
+		ENDCASE				
+		CASE 2:
+			
+			TRIGGER = RND(10000):IF BRAINS(OBJ,2,1) > TRIGGER THEN _ROTATE_OBJECT(OBJ, -TURN_SPEED)
+			TRIGGER = RND(10000):IF BRAINS(OBJ,2,2) > TRIGGER THEN _ROTATE_OBJECT(OBJ, TURN_SPEED)
+			TRIGGER = RND(10000):IF BRAINS(OBJ,2,3) > TRIGGER THEN _MOVE_OBJECT(OBJ,1)
+			TRIGGER = RND(10000):IF BRAINS(OBJ,2,4) > TRIGGER THEN _MOVE_OBJECT(OBJ,-1)
+		ENDCASE					
+	ENDSELECT
+	
+endfunction
+
+
+
+
+
+
+function _NEWX#(X# as FLOAT, ANGLE# as FLOAT, DIST# as FLOAT)
+    NX# = X# + DIST# * COS(ANGLE#)  
+endfunction NX#
+
+function _NEWY#(Y#, ANGLE#, DIST#)
+    NY# = Y# - DIST * SIN(ANGLE#)
+endfunction NY#
+
+function _WRAPX(VALUE AS INTEGER)
+	IF VALUE < LEFT_BOUNDS THEN VALUE = WORLD_WIDTH
+	IF VALUE > WORLD_WIDTH THEN VALUE = LEFT_BOUNDS
+endfunction VALUE
+
+function _WRAPY(VALUE AS INTEGER)
+	IF VALUE < TOP_BOUNDS THEN VALUE = WORLD_HEIGHT 
+	IF VALUE > WORLD_HEIGHT THEN VALUE = TOP_BOUNDS
+endfunction VALUE
+
+function _CHECK_SPACE(X AS INTEGER,Y AS INTEGER)
+    A = WORLD(_WRAPX(X),_WRAPY(Y))
+endfunction A
+
+
+
+
+function _SET_PLAYER_POSITION(OBJ)
+CREATURES(OBJ).X = _WRAPX(CREATURES(OBJ).X)
+CREATURES(OBJ).Y = _WRAPY(CREATURES(OBJ).Y)
+CREATURES(OBJ).ANGLE = WRAPVALUE(CREATURES(OBJ).ANGLE)
+endfunction
+
+
+function _INT(VALUE as FLOAT)
+	LOCAL RET AS INTEGER
+	RET = VALUE
+endfunction RET
+
+function _FLOAT#(VALUE as INTEGER)
+	LOCAL RET# AS FLOAT
+	RET# = VALUE
+endfunction RET
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//===========================LINE 316 _OBJECT_HIT
+//      		    IF WORLD(_WRAPX(X+1),_WRAPY(Y)) <> 0   THEN  RET =  WORLD(_WRAPX(X+1),_WRAPY(Y))                        
+//      	IF WORLD(_WRAPX(X+1),_WRAPY(Y+1)) <> 0 THEN  RET =  WORLD(_WRAPX(X+1),_WRAPY(Y+1))          
+//      	IF WORLD(_WRAPX(X+1),_WRAPY(Y-1)) <> 0 THEN  RET =  WORLD(_WRAPX(X+1),_WRAPY(Y-1))          
+//      	IF WORLD(_WRAPX(X),_WRAPY(Y-1)) <> 0    THEN RET =  WORLD(_WRAPX(X),_WRAPY(Y-1))   
+// 
+//  	    IF WORLD(_WRAPX(X),_WRAPY(Y+1)) <> 0   THEN  RET =  WORLD(_WRAPX(X),_WRAPY(Y+1))       
+//  	    IF WORLD(_WRAPX(X-1),_WRAPY(Y)) <> 0    THEN RET =  WORLD(_WRAPX(X-1),_WRAPY(Y))           
+//      	IF WORLD(_WRAPX(X-1),_WRAPY(Y+1)) <> 0 THEN  RET =  WORLD(_WRAPX(X-1),_WRAPY(Y+1))          
+//      	IF WORLD(_WRAPX(X-1),_WRAPY(Y-1)) <> 0  THEN RET =  WORLD(_WRAPX(X-1),_WRAPY(Y-1))    
